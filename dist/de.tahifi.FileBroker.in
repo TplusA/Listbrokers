@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=de.tahifi.FileBroker
+Exec=@bindir@/strbo_lb_usb
+User=strbo

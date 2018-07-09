@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=de.tahifi.UPnPBroker
+Exec=@bindir@/strbo_lb_upnp
+User=strbo

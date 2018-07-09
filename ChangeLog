@@ -1,0 +1,9 @@
+2018-07-10  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 4.0 released.
+
+	* Licensing: Remove all code for interfacing with Airable. The code
+	  can now be distributed under the terms of the GPL 3.
+
+
+Copyright 2015, 2016, 2017, 2018 T+A elektroakustik GmbH & Co. KG

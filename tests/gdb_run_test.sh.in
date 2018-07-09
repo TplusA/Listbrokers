@@ -1,0 +1,24 @@
+#! /bin/sh
+
+set -eu
+
+CUTTER="@CUTTER@"
+TEMPFILE="gdb_run_test.gdb"
+
+if test $# -ne 1
+then
+    echo "Usage: $0 <test name>"
+    exit 1
+fi
+
+TESTNAME="$1"
+
+cat <<EOF >"$TEMPFILE"
+exec-file $CUTTER
+set args --source-directory="@srcdir@" -n $TESTNAME .
+run
+EOF
+
+gdb -x "$TEMPFILE"
+
+rm -f "$TEMPFILE"

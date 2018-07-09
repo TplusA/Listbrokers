@@ -1,0 +1,11 @@
+/aclocal.m4
+/autom4te.cache/
+/config/
+/config.h.in
+/config.h.in~
+/configure
+/cscope.out
+/tags
+/*.taghl
+/.gitreview
+Makefile.in
