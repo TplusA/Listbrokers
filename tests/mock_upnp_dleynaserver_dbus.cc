@@ -173,3 +173,8 @@ const gchar *tdbus_dleynaserver_media_device_get_model_number(tdbusdleynaserverM
 
     return expect.ret_string_.c_str();
 }
+
+const gchar *tdbus_dleynaserver_media_device_get_location (tdbusdleynaserverMediaDevice *object)
+{
+     return "http://1.2.3.4:8000/device.xml";
+}

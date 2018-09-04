@@ -22,6 +22,14 @@
 
 #include <stack>
 #include <cstring>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <linux/if_link.h>
 
 #include "upnp_list.hh"
 #include "servers_lost_and_found.hh"
@@ -165,6 +173,69 @@ class AddToListAsyncData
     {}
 };
 
+namespace UpnpServerListDetail  {
+  static bool is_media_server_local(tdbusdleynaserverMediaDevice *proxy);
+};
+
+bool UpnpServerListDetail::is_media_server_local(tdbusdleynaserverMediaDevice *proxy)
+{
+    const std::string server_location = tdbus_dleynaserver_media_device_get_location(proxy);
+
+    // Extract host part from location string
+
+    std::string host_string;
+    const std::string prot_end("://");
+    std::string::const_iterator it1 = std::search(server_location.begin(), server_location.end(),
+                                                  prot_end.begin(), prot_end.end());
+    if(it1 != server_location.end())
+    {
+        advance(it1, prot_end.length());
+        std::string::const_iterator it2 = std::find_if(it1, server_location.end(),
+                                                       [](char c){ return c=='/'||c==':'; });
+        host_string.reserve(distance(it1, it2));
+        std::copy(it1, it2, back_inserter(host_string));
+    }
+
+    // Convert host from string to byte-representation
+
+    in_addr host_addr;
+    const int rc = inet_pton(AF_INET, host_string.c_str(), &host_addr);
+    if(rc != 1)
+    {
+        msg_error(0, LOG_NOTICE, "Can't parse IP address: %s", host_string.c_str());
+        return false;
+    }
+
+    // Iterate trough network interfaces and compare IP
+
+    ifaddrs *ifaddr;
+    if(getifaddrs(&ifaddr) != 0)
+    {
+        msg_error(0, LOG_NOTICE, "Can't list network interfaces");
+        return false;
+    }
+
+    bool result = false;
+    for(ifaddrs *ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+    {
+        if(ifa->ifa_addr == NULL)
+            continue;
+
+        if(ifa->ifa_addr->sa_family == AF_INET)
+        {
+            const in_addr if_addr = (reinterpret_cast<sockaddr_in*>(ifa->ifa_addr))->sin_addr;
+            if(if_addr.s_addr == host_addr.s_addr)
+            {
+                result = true;
+                break;
+            }
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return result;
+}
+
 void UPnP::ServerList::media_device_proxy_connected(GObject *source_object,
                                                     GAsyncResult *res,
                                                     gpointer user_data)
@@ -188,6 +259,8 @@ void UPnP::ServerList::media_device_proxy_connected(GObject *source_object,
 
         if(it != data.server_list_.end())
             BUG("UPnP server %s already in list", data.object_path_.c_str());
+        else if(UpnpServerListDetail::is_media_server_local(proxy))
+            msg_error(0, LOG_NOTICE, "Ignoring UPnP server on the same host");
         else if(!UPnP::is_media_device_usable(proxy))
             msg_error(0, LOG_NOTICE,
                       "Ignoring UPnP server %s, seems to be unusable",
