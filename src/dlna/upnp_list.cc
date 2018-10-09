@@ -258,7 +258,12 @@ void UPnP::ServerList::media_device_proxy_connected(GObject *source_object,
                              }));
 
         if(it != data.server_list_.end())
-            BUG("UPnP server %s already in list", data.object_path_.c_str());
+        {
+            msg_info("Updating already known UPnP server %s", data.object_path_.c_str());
+            it->get_specific_data().replace_dbus_proxy(proxy);
+            if(data.notify_server_added_ != nullptr)
+                data.notify_server_added_();
+        }
         else if(UpnpServerListDetail::is_media_server_local(proxy))
             msg_error(0, LOG_NOTICE, "Ignoring UPnP server on the same host");
         else if(!UPnP::is_media_device_usable(proxy))

@@ -142,7 +142,7 @@ void cut_teardown()
  * \param path
  *     Name of the UPnP on D-Bus.
  *
- * \param expect_success
+ * \param expect_new_entry
  *     Expected outcome of #UPnP::ServerList::add_to_list().
  *
  * \param model_name
@@ -150,7 +150,7 @@ void cut_teardown()
  */
 static void insert_upnp_server(std::shared_ptr<UPnP::ServerList> root,
                                const char *path,
-                               bool expect_success = true,
+                               bool expect_new_entry = true,
                                const char *model_name = nullptr)
 {
     mock_dbus_upnp_helpers->expect_create_media_device_proxy_for_object_path_begin_callback(FakeDBus::create_proxy_begin);
@@ -160,7 +160,7 @@ static void insert_upnp_server(std::shared_ptr<UPnP::ServerList> root,
     if(old_root_size > 0)
         mock_dbus_upnp_helpers->expect_proxy_object_path_equals_callback(FakeDBus::compare_proxy_object_path, root->size());
 
-    if(expect_success)
+    if(expect_new_entry)
     {
         mock_dbus_upnp_helpers->expect_is_media_device_usable(true,
             reinterpret_cast<tdbusdleynaserverMediaDevice *>(FakeDBus::next_proxy_id));
@@ -171,13 +171,13 @@ static void insert_upnp_server(std::shared_ptr<UPnP::ServerList> root,
     else
     {
         char buffer[512];
-        snprintf(buffer, sizeof(buffer), "BUG: UPnP server %s already in list", path);
-        mock_messages->expect_msg_error_formatted(0, LOG_CRIT, buffer);
+        snprintf(buffer, sizeof(buffer), "Updating already known UPnP server %s", path);
+        mock_messages->expect_msg_info_formatted(buffer);
     }
 
     root->add_to_list(path, nullptr);
 
-    if(expect_success)
+    if(expect_new_entry)
         cppcut_assert_equal(old_root_size + 1, root->size());
     else
         cppcut_assert_equal(old_root_size, root->size());
@@ -208,10 +208,10 @@ void test_insert_upnp_servers_into_list()
 }
 
 /*!\test
- * UPnP servers with same path cannot exist and therefore cannot be inserted
- * into the server list.
+ * UPnP servers with same path cannot exist, but the D-Bus proxy to the server
+ * may have to be updated.
  */
-void test_insert_same_upnp_server_into_list_twice_fails()
+void test_insert_same_upnp_server_into_list_twice_updates_dbus_proxy()
 {
     auto root = std::make_shared<UPnP::ServerList>(nullptr);
     cppcut_assert_not_null(root.get());

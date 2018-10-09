@@ -144,6 +144,19 @@ class ServerItemData
         return dbus_proxy_;
     }
 
+    /*!\internal
+     * For D-Bus/UPnP code only.
+     */
+    void replace_dbus_proxy(tdbusdleynaserverMediaDevice *proxy)
+    {
+        UPnP::ServerItemData::object_ref(proxy);
+
+        if(dbus_proxy_ != nullptr)
+            UPnP::ServerItemData::object_unref(dbus_proxy_);
+
+        dbus_proxy_ = proxy;
+    }
+
     bool has_quirks(const ServerQuirks &quirks) const
     {
         return server_quirks_.check(quirks);
