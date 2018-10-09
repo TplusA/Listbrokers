@@ -100,6 +100,18 @@ void UPnP::ListTree::remove_from_server_list(const std::vector<std::string> &lis
         reinsert_server_list();
 }
 
+void UPnP::ListTree::clear()
+{
+    auto server_list = lt_manager_.lookup_list<UPnP::ServerList>(server_list_id_);
+    log_assert(server_list != nullptr);
+
+    std::vector<std::string> list;
+    for(const auto &item : *server_list)
+        list.emplace_back(item.get_specific_data().get_dbus_path_copy());
+
+    remove_from_server_list(list);
+}
+
 void UPnP::ListTree::dump_server_list()
 {
     auto all_servers = get_server_list();
@@ -328,7 +340,9 @@ ListError UPnP::ListTree::get_uris_for_item(ID::List list_id, ID::Item item_id,
 
     tdbusupnpMediaItem2 *proxy =
         create_media_item_proxy_for_object_path(dbus_path.c_str());
-    log_assert(proxy != NULL);
+
+    if(proxy == nullptr)
+        return ListError(ListError::NOT_FOUND);
 
     MD5::Context ctx;
     MD5::init(ctx);

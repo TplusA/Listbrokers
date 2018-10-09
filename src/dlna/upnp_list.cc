@@ -304,11 +304,13 @@ void UPnP::ServerList::add_to_list(const std::string &object_path,
     auto *add_data = new AddToListAsyncData(*this, object_path,
                                             std::move(notify_server_added),
                                             std::move(data));
+    if(add_data == nullptr)
+        return;
 
-    UPnP::create_media_device_proxy_for_object_path_begin(object_path,
-                                                          add_data->data_->get_cancellable(),
-                                                          media_device_proxy_connected,
-                                                          add_data);
+    if(!UPnP::create_media_device_proxy_for_object_path_begin(
+            object_path, add_data->data_->get_cancellable(),
+            media_device_proxy_connected, add_data))
+        delete add_data;
 }
 
 UPnP::ServerList::RemoveFromListResult

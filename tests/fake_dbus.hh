@@ -70,7 +70,7 @@ static ProxyID next_proxy_id;
 static std::map<ProxyID, std::shared_ptr<ObjectProxy>> all_proxies;
 static std::vector<std::shared_ptr<ObjectProxy>> proxy_extra_refs;
 
-static void create_proxy_begin(const std::string &path,
+static bool create_proxy_begin(const std::string &path,
                                GAsyncReadyCallback ready_callback,
                                void *ready_callback_data)
 {
@@ -86,6 +86,8 @@ static void create_proxy_begin(const std::string &path,
 
     ready_callback(nullptr, reinterpret_cast<GAsyncResult *>(next_proxy_id++),
                    ready_callback_data);
+
+    return true;
 }
 
 static std::string get_proxy_object_path(tdbusdleynaserverMediaDevice *proxy)

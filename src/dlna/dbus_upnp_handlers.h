@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2018  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -36,6 +36,7 @@ struct DBusUPnPSignalData;
 void dbussignal_dleynaserver_manager(GDBusProxy *proxy, const gchar *sender_name,
                                      const gchar *signal_name, GVariant *parameters,
                                      gpointer user_data);
+void dbussignal_dleynaserver_vanished(struct DBusUPnPSignalData *data);
 
 #ifdef __cplusplus
 }

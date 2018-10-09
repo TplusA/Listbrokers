@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -89,6 +89,11 @@ class ListTree: public ListTreeIface
      *     List of D-Bus object names to remove.
      */
     void remove_from_server_list(const std::vector<std::string> &list);
+
+    /*!
+     * Remove all UPnP servers from the server list.
+     */
+    void clear();
 
     /*!
      * Called when a list was discarded from cache during garbage collection.

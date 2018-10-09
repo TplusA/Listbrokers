@@ -30,7 +30,7 @@ namespace UPnP
 std::string get_proxy_object_path(tdbusdleynaserverMediaDevice *proxy);
 bool proxy_object_path_equals(tdbusdleynaserverMediaDevice *proxy,
                               const std::string &path);
-void create_media_device_proxy_for_object_path_begin(const std::string &path,
+bool create_media_device_proxy_for_object_path_begin(const std::string &path,
                                                      GCancellable *cancellable,
                                                      GAsyncReadyCallback callback,
                                                      void *callback_data);

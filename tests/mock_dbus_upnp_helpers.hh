@@ -48,7 +48,7 @@ class MockDBusUPnPHelpers
                                          const std::string &path);
     void expect_proxy_object_path_equals_callback(path_equals_callback_t fn, size_t count = 1);
 
-    typedef void (*create_proxy_callback_t)(const std::string &path,
+    typedef bool (*create_proxy_callback_t)(const std::string &path,
                                             GAsyncReadyCallback ready_callback,
                                             void *ready_callback_data);
     void expect_create_media_device_proxy_for_object_path_begin_callback(create_proxy_callback_t fn);

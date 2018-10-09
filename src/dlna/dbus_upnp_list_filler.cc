@@ -116,6 +116,13 @@ ssize_t UPnP::DBusUPnPFiller::fill(ItemProvider<UPnP::ItemData> &item_provider,
     tdbusupnpMediaContainer2 *proxy =
         create_media_container_proxy_for_object_path(media_list->get_dbus_object_path().c_str());
 
+    if(proxy == nullptr)
+    {
+        msg_error(0, LOG_ERR, "Cannot fill list, dLeyna not up and running");
+        error = ListError::NOT_FOUND;
+        return -1;
+    }
+
     GVariant *children = NULL;
 
     static const char *const filter_with_album_art[] =

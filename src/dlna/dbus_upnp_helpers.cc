@@ -40,19 +40,23 @@ bool UPnP::proxy_object_path_equals(tdbusdleynaserverMediaDevice *proxy,
     return path == g_dbus_proxy_get_object_path(G_DBUS_PROXY(proxy));
 }
 
-void UPnP::create_media_device_proxy_for_object_path_begin(const std::string &path,
+bool UPnP::create_media_device_proxy_for_object_path_begin(const std::string &path,
                                                            GCancellable *cancellable,
                                                            GAsyncReadyCallback callback,
                                                            void *callback_data)
 {
-    GDBusConnection *connection =
-        g_dbus_proxy_get_connection(G_DBUS_PROXY(dbus_upnp_get_dleynaserver_manager_iface()));
+    auto *proxy = G_DBUS_PROXY(dbus_upnp_get_dleynaserver_manager_iface());
+    if(proxy == nullptr)
+        return false;
+
+    GDBusConnection *connection = g_dbus_proxy_get_connection(proxy);
 
     tdbus_dleynaserver_media_device_proxy_new(connection,
                                               G_DBUS_PROXY_FLAGS_NONE,
                                               "com.intel.dleyna-server",
                                               path.c_str(), cancellable,
                                               callback, callback_data);
+    return true;
 }
 
 tdbusdleynaserverMediaDevice *
@@ -91,8 +95,11 @@ bool UPnP::is_media_device_usable(tdbusdleynaserverMediaDevice *proxy)
 tdbusupnpMediaContainer2 *
 UPnP::create_media_container_proxy_for_object_path(const char *path)
 {
-    GDBusConnection *connection =
-        g_dbus_proxy_get_connection(G_DBUS_PROXY(dbus_upnp_get_dleynaserver_manager_iface()));
+    auto *proxy = G_DBUS_PROXY(dbus_upnp_get_dleynaserver_manager_iface());
+    if(proxy == nullptr)
+        return nullptr;
+
+    GDBusConnection *connection = g_dbus_proxy_get_connection(proxy);
 
     GError *error = NULL;
 
@@ -109,8 +116,11 @@ UPnP::create_media_container_proxy_for_object_path(const char *path)
 tdbusupnpMediaItem2 *
 UPnP::create_media_item_proxy_for_object_path(const char *path)
 {
-    GDBusConnection *connection =
-        g_dbus_proxy_get_connection(G_DBUS_PROXY(dbus_upnp_get_dleynaserver_manager_iface()));
+    auto *proxy = G_DBUS_PROXY(dbus_upnp_get_dleynaserver_manager_iface());
+    if(proxy == nullptr)
+        return nullptr;
+
+    GDBusConnection *connection = g_dbus_proxy_get_connection(proxy);
 
     GError *error = NULL;
 
@@ -128,7 +138,8 @@ uint32_t UPnP::get_size_of_container(const std::string &path)
 {
     tdbusupnpMediaContainer2 *proxy =
         create_media_container_proxy_for_object_path(path.c_str());
-    log_assert(proxy != nullptr);
+    if(proxy == nullptr)
+        return 0;
 
     guint retval = tdbus_upnp_media_container2_get_child_count(proxy);
 

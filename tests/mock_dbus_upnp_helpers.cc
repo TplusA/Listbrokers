@@ -255,7 +255,7 @@ bool UPnP::proxy_object_path_equals(tdbusdleynaserverMediaDevice *proxy,
     return expect.d.ret_bool_;
 }
 
-void UPnP::create_media_device_proxy_for_object_path_begin(const std::string &path,
+bool UPnP::create_media_device_proxy_for_object_path_begin(const std::string &path,
                                                            GCancellable *cancellable,
                                                            GAsyncReadyCallback callback,
                                                            void *callback_data)
@@ -267,7 +267,9 @@ void UPnP::create_media_device_proxy_for_object_path_begin(const std::string &pa
     if(expect.d.create_proxy_fn_ != nullptr)
         return expect.d.create_proxy_fn_(path, callback, callback_data);
 
-    cppcut_assert_equal(expect.d.string_, std::string(path));
+    cut_fail("unexpected");
+
+    return false;
 }
 
 bool UPnP::is_media_device_usable(tdbusdleynaserverMediaDevice *proxy)
