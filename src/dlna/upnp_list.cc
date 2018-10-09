@@ -179,7 +179,11 @@ namespace UpnpServerListDetail  {
 
 bool UpnpServerListDetail::is_media_server_local(tdbusdleynaserverMediaDevice *proxy)
 {
-    const std::string server_location = tdbus_dleynaserver_media_device_get_location(proxy);
+    const auto *server_location_cstr = tdbus_dleynaserver_media_device_get_location(proxy);
+    if(server_location_cstr == nullptr)
+        return false;
+
+    const std::string server_location(server_location_cstr);
 
     // Extract host part from location string
 
