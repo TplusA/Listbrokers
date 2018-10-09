@@ -75,7 +75,6 @@ class ServerItemData
     /*!
      * D-Bus proxy to the UPnP server object as exposed by dLeyna.
      */
-  public:
     tdbusdleynaserverMediaDevice *dbus_proxy_;
 
     /*!
