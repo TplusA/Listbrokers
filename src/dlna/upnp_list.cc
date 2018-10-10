@@ -273,8 +273,6 @@ void UPnP::ServerList::media_device_proxy_connected(GObject *source_object,
 
             if(data.notify_server_added_ != nullptr)
                 data.notify_server_added_();
-
-            UPnP::ServerItemData::object_ref(proxy);
         }
 
         UPnP::ServerItemData::object_unref(proxy);

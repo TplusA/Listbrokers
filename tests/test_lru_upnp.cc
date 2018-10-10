@@ -204,7 +204,7 @@ void test_insert_upnp_servers_into_list()
     insert_upnp_server(root, paths[2]);
     insert_upnp_server(root, paths[3]);
     cppcut_assert_equal(4LU, FakeDBus::all_proxies.size());
-    cppcut_assert_equal(4LU, FakeDBus::proxy_extra_refs.size());
+    cut_assert_true(FakeDBus::proxy_extra_refs.empty());
 }
 
 /*!\test
@@ -226,7 +226,7 @@ void test_insert_same_upnp_server_into_list_twice_fails()
     insert_upnp_server(root, paths[1]);
     insert_upnp_server(root, paths[1], false);
     cppcut_assert_equal(2LU, FakeDBus::all_proxies.size());
-    cppcut_assert_equal(2LU, FakeDBus::proxy_extra_refs.size());
+    cut_assert_true(FakeDBus::proxy_extra_refs.empty());
 }
 
 static std::shared_ptr<UPnP::ServerList> make_list_for_remove_tests()
@@ -245,7 +245,7 @@ static std::shared_ptr<UPnP::ServerList> make_list_for_remove_tests()
     insert_upnp_server(root, paths[1]);
     insert_upnp_server(root, paths[2]);
     cppcut_assert_equal(3LU, FakeDBus::all_proxies.size());
-    cppcut_assert_equal(3LU, FakeDBus::proxy_extra_refs.size());
+    cut_assert_true(FakeDBus::proxy_extra_refs.empty());
 
     return root;
 }
@@ -259,11 +259,11 @@ void test_remove_upnp_server_from_list()
     const auto expected_number_of_servers = root->size() - 1;
 
     auto it = FakeDBus::all_proxies.find(100);
-    cppcut_assert_equal(2L, it->second.use_count());
+    cppcut_assert_equal(1L, it->second.use_count());
     it = FakeDBus::all_proxies.find(101);
-    cppcut_assert_equal(2L, it->second.use_count());
+    cppcut_assert_equal(1L, it->second.use_count());
     it = FakeDBus::all_proxies.find(102);
-    cppcut_assert_equal(2L, it->second.use_count());
+    cppcut_assert_equal(1L, it->second.use_count());
 
     mock_dbus_upnp_helpers->expect_proxy_object_path_equals_callback(FakeDBus::compare_proxy_object_path, 2);
     ID::List id;
@@ -271,13 +271,13 @@ void test_remove_upnp_server_from_list()
     cut_assert_false(id.is_valid());
     cppcut_assert_equal(expected_number_of_servers, root->size());
 
-    cppcut_assert_equal(2LU, FakeDBus::proxy_extra_refs.size());
+    cut_assert_true(FakeDBus::proxy_extra_refs.empty());
     it = FakeDBus::all_proxies.find(100);
-    cppcut_assert_equal(2L, it->second.use_count());
-    it = FakeDBus::all_proxies.find(101);
     cppcut_assert_equal(1L, it->second.use_count());
+    it = FakeDBus::all_proxies.find(101);
+    cut_assert(it == FakeDBus::all_proxies.end());
     it = FakeDBus::all_proxies.find(102);
-    cppcut_assert_equal(2L, it->second.use_count());
+    cppcut_assert_equal(1L, it->second.use_count());
 }
 
 /*!\test
@@ -309,7 +309,7 @@ void test_remove_nonexistent_upnp_server_from_list_fails()
     }
 
     cppcut_assert_equal(3LU, FakeDBus::all_proxies.size());
-    cppcut_assert_equal(3LU, FakeDBus::proxy_extra_refs.size());
+    cut_assert_true(FakeDBus::proxy_extra_refs.empty());
 }
 
 class DummyFiller: public TiledListFillerIface<UPnP::ItemData>
