@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.69])
-AC_INIT([Listbrokers], [4.0], [r.tiemann@ta-hifi.com])
+AC_INIT([Listbrokers], [4.1], [r.tiemann@ta-hifi.com])
 AC_CONFIG_AUX_DIR([config])
 AM_INIT_AUTOMAKE([1.11 -Wall foreign])
 AM_SILENT_RULES([yes])
