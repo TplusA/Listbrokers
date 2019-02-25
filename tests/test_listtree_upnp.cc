@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -74,7 +74,7 @@ static constexpr size_t maximum_number_of_objects = 1000;
 static UPnP::ListTree *list_tree;
 static Cacheable::CheckNoOverrides *cacheable_check;
 
-constexpr static tdbuslistsNavigation *const dbus_lists_navigation_iface_dummy =
+static tdbuslistsNavigation *const dbus_lists_navigation_iface_dummy =
     reinterpret_cast<tdbuslistsNavigation *>(0x24681357);
 
 static void add_servers(const std::vector<std::string> &servers, ID::List old_server_list_id)

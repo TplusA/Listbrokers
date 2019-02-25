@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -97,7 +97,7 @@ void cut_setup()
 
     mock_timebase.reset();
 
-    cache = new LRU::Cache(100000, maximum_number_of_objects,
+    cache = new LRU::Cache(200000, maximum_number_of_objects,
                            std::chrono::minutes(1));
     cppcut_assert_not_null(cache);
     cache->set_callbacks([]{}, []{}, [] (ID::List id) {}, []{});
