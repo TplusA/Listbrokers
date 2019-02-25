@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -22,6 +22,7 @@
 
 #include <string>
 #include <sstream>
+#include <algorithm>
 
 #include "strbo_url_usb.hh"
 #include "messages.h"
@@ -204,16 +205,9 @@ bool USB::LocationKeyReference::set_url_impl(const std::string &url, size_t offs
 size_t USB::LocationTrace::get_trace_length() const
 {
 
-    if(c_.item_name_.empty())
-        return 0;
-
-    size_t result = 1;
-
-    for(const char &ch : c_.item_name_)
-        if(ch == '/')
-            ++result;
-
-    return result;
+    return c_.item_name_.empty()
+        ? 0
+        : std::count(c_.item_name_.begin(), c_.item_name_.end(), '/') + 1;
 }
 
 std::string USB::LocationTrace::str_impl() const

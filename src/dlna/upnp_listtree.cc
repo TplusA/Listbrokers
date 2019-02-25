@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -106,8 +106,12 @@ void UPnP::ListTree::clear()
     log_assert(server_list != nullptr);
 
     std::vector<std::string> list;
-    for(const auto &item : *server_list)
-        list.emplace_back(item.get_specific_data().get_dbus_path_copy());
+    std::transform(
+        server_list->begin(), server_list->end(), std::back_inserter(list),
+        [] (const auto &item)
+        {
+            return item.get_specific_data().get_dbus_path_copy();
+        });
 
     remove_from_server_list(list);
 }
