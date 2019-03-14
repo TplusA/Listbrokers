@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -34,6 +34,8 @@ strbo_lb_upnp_SOURCES = \
     dbus_upnp_iface.c \
     dbus_upnp_iface.h \
     dbus_upnp_iface_deep.h \
+    periodic_rescan.cc \
+    periodic_rescan.hh \
     ../common/main.cc \
     ../common/main.hh \
     ../common/lru.hh \

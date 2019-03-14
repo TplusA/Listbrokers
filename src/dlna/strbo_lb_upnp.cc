@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -27,6 +27,7 @@
 
 #include "dbus_upnp_iface.h"
 #include "dbus_upnp_handlers.hh"
+#include "periodic_rescan.hh"
 #include "messages_glib.h"
 #include "versioninfo.h"
 
@@ -241,8 +242,22 @@ int LBApp::setup_application_data(DBusData *&dbus_data, ListTreeData *&lt_data,
     return 0;
 }
 
+static void dleyna_status_watcher(bool is_available, void *user_data)
+{
+    auto *const periodic_rescan = static_cast<UPnP::PeriodicRescan *>(user_data);
+
+    if(is_available)
+        periodic_rescan->enable();
+    else
+        periodic_rescan->disable();
+}
+
 void LBApp::dbus_setup(DBusData &dbd)
 {
+    static std::unique_ptr<UPnP::PeriodicRescan> periodic_rescan;
+    periodic_rescan = std::make_unique<UPnP::PeriodicRescan>(15 * 60);
+
     dbus_upnp_setup(true, dbd.dbus_object_path_,
-                    static_cast<UPnPDBusData &>(dbd).upnp_signal_data_.get());
+                    static_cast<UPnPDBusData &>(dbd).upnp_signal_data_.get(),
+                    dleyna_status_watcher, periodic_rescan.get());
 }

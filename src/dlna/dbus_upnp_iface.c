@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2018, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -39,6 +39,8 @@ struct DBusUPnPData
     tdbusdleynaserverManager *dleynaserver_manager_iface;
     struct DBusUPnPSignalData *signal_data;
     bool is_connecting;
+    void (*dleyna_status_watcher)(bool, void *);
+    void *dleyna_status_watcher_data;
 };
 
 static void vanished(GDBusConnection *connection, const gchar *name,
@@ -60,6 +62,7 @@ static void created_dleyna_proxy(GObject *source_object, GAsyncResult *res,
         g_signal_connect(data->dleynaserver_manager_iface, "g-signal",
                          G_CALLBACK(dbussignal_dleynaserver_manager),
                          data->signal_data);
+        data->dleyna_status_watcher(true, data->dleyna_status_watcher_data);
     }
     else
         vanished(data->connection, NULL, user_data);
@@ -76,6 +79,7 @@ static void vanished(GDBusConnection *connection, const gchar *name,
     if(data->dleynaserver_manager_iface != NULL)
     {
         msg_error(0, LOG_NOTICE, "dLeyna has vanished, trying to reconnect");
+        data->dleyna_status_watcher(false, data->dleyna_status_watcher_data);
         g_object_unref(data->dleynaserver_manager_iface);
         data->dleynaserver_manager_iface = NULL;
         dbussignal_dleynaserver_vanished(data->signal_data);
@@ -118,7 +122,9 @@ static void shutdown_dbus(bool is_session_bus, gpointer user_data)
  *     Should call com.intel.dLeynaServer.Manager.SetProtocolInfo().
  */
 void dbus_upnp_setup(bool connect_to_session_bus, const char *dbus_object_path,
-                     struct DBusUPnPSignalData *signal_data)
+                     struct DBusUPnPSignalData *signal_data,
+                     void (*dleyna_status_watcher)(bool, void *),
+                     void *dleyna_status_watcher_data)
 {
     dbus_upnp_data.dbus_object_path = dbus_object_path;
     dbus_upnp_data.connection = NULL;
@@ -126,6 +132,8 @@ void dbus_upnp_setup(bool connect_to_session_bus, const char *dbus_object_path,
     dbus_upnp_data.dleynaserver_manager_iface = NULL;
     dbus_upnp_data.signal_data = signal_data;
     dbus_upnp_data.is_connecting = false;
+    dbus_upnp_data.dleyna_status_watcher = dleyna_status_watcher;
+    dbus_upnp_data.dleyna_status_watcher_data = dleyna_status_watcher_data;
 
     const struct dbus_register_submodule_t self =
     {
