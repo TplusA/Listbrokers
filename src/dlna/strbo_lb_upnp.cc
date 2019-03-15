@@ -255,7 +255,7 @@ static void dleyna_status_watcher(bool is_available, void *user_data)
 void LBApp::dbus_setup(DBusData &dbd)
 {
     static std::unique_ptr<UPnP::PeriodicRescan> periodic_rescan;
-    periodic_rescan = std::make_unique<UPnP::PeriodicRescan>(15 * 60);
+    periodic_rescan = std::make_unique<UPnP::PeriodicRescan>(10 * 60);
 
     dbus_upnp_setup(true, dbd.dbus_object_path_,
                     static_cast<UPnPDBusData &>(dbd).upnp_signal_data_.get(),
