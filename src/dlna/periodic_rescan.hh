@@ -29,7 +29,7 @@ class PeriodicRescan
 {
   private:
     const unsigned int interval_seconds_;
-    bool is_enabled_;
+    unsigned int timeout_id_;
 
   public:
     PeriodicRescan(const PeriodicRescan &) = delete;
@@ -39,7 +39,7 @@ class PeriodicRescan
 
     explicit PeriodicRescan(unsigned int interval_seconds):
         interval_seconds_(interval_seconds),
-        is_enabled_(false)
+        timeout_id_(0)
     {}
 
     void enable();

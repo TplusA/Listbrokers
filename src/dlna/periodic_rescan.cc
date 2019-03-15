@@ -23,25 +23,41 @@
 #include "periodic_rescan.hh"
 #include "messages.h"
 
+#include <glib.h>
+
+static gboolean rescan_now(gpointer user_data)
+{
+    msg_info("UPnP rescan");
+    return G_SOURCE_CONTINUE;
+}
+
 void UPnP::PeriodicRescan::enable()
 {
     msg_info("Enable periodic UPnP rescanning, interval %u seconds", interval_seconds_);
 
-    if(is_enabled_)
+    if(timeout_id_ > 0)
     {
         BUG("Already enabled");
         return;
     }
 
-    is_enabled_ = true;
+    timeout_id_ = g_timeout_add_seconds(interval_seconds_, rescan_now, this);
+
+    if(timeout_id_ == 0)
+        msg_error(0, LOG_ERR,
+                  "Failed registering timeout function for UPnP rescanning");
 };
 
 void UPnP::PeriodicRescan::disable()
 {
     msg_info("Disable periodic UPnP rescanning");
 
-    if(!is_enabled_)
+    if(timeout_id_ == 0)
+    {
         BUG("Already disabled");
+        return;
+    }
 
-    is_enabled_ = false;
+    g_source_remove(timeout_id_);
+    timeout_id_ = 0;
 }
