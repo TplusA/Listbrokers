@@ -1,3 +1,9 @@
+2019-03-15  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 4.2 released.
+
+	* UPnP: Periodic scan for servers every 10 minutes.
+
 2018-10-10  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 4.1 released.
@@ -17,4 +23,4 @@
 	  can now be distributed under the terms of the GPL 3.
 
 
-Copyright 2015, 2016, 2017, 2018 T+A elektroakustik GmbH & Co. KG
+Copyright 2015, 2016, 2017, 2018, 2019 T+A elektroakustik GmbH & Co. KG
