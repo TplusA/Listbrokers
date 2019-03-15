@@ -19,6 +19,9 @@
 #ifndef PERIODIC_RESCAN_HH
 #define PERIODIC_RESCAN_HH
 
+struct _GObject;
+struct _GAsyncResult;
+
 namespace UPnP
 {
 
@@ -29,6 +32,7 @@ class PeriodicRescan
 {
   private:
     const unsigned int interval_seconds_;
+    bool is_inhibited_;
     unsigned int timeout_id_;
 
   public:
@@ -39,11 +43,18 @@ class PeriodicRescan
 
     explicit PeriodicRescan(unsigned int interval_seconds):
         interval_seconds_(interval_seconds),
+        is_inhibited_(false),
         timeout_id_(0)
     {}
 
     void enable();
     void disable();
+
+  private:
+    static int rescan_now_trampoline(void *scan);
+    int rescan_now();
+    static void rescan_done(struct _GObject *source_object,
+                            struct _GAsyncResult *res, void *scan);
 };
 
 }

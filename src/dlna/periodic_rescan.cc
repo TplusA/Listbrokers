@@ -22,13 +22,49 @@
 
 #include "periodic_rescan.hh"
 #include "messages.h"
+#include "upnp_dleynaserver_dbus.h"
+#include "dbus_upnp_iface_deep.h"
+#include "dbus_common.h"
 
-#include <glib.h>
-
-static gboolean rescan_now(gpointer user_data)
+gboolean UPnP::PeriodicRescan::rescan_now_trampoline(gpointer scan)
 {
-    msg_info("UPnP rescan");
+    return static_cast<PeriodicRescan *>(scan)->rescan_now();
+}
+
+gboolean UPnP::PeriodicRescan::rescan_now()
+{
+    if(is_inhibited_)
+    {
+        msg_error(0, LOG_WARNING,
+                  "Should perform UPnP rescan, but still waiting for completion of previous scan");
+        return G_SOURCE_CONTINUE;
+    }
+
+    auto *iface = dbus_upnp_get_dleynaserver_manager_iface();
+
+    if(iface == nullptr)
+    {
+        /* glitch, should never happen (TM) */
+        BUG("Should perform UPnP rescan, but have no D-Bus connection to dLeyna");
+        return G_SOURCE_REMOVE;
+    }
+
+    msg_info("UPnP rescan start");
+    is_inhibited_ = true;
+    tdbus_dleynaserver_manager_call_rescan(iface, nullptr, rescan_done, this);
+
     return G_SOURCE_CONTINUE;
+}
+
+void UPnP::PeriodicRescan::rescan_done(GObject *source_object,
+                                       GAsyncResult *res, gpointer scan)
+{
+    msg_info("UPnP rescan finished");
+    GError *gerror = NULL;
+    tdbus_dleynaserver_manager_call_rescan_finish(
+        TDBUS_DLEYNASERVER_MANAGER(source_object), res, &gerror);
+    (void)dbus_common_handle_error(&gerror);
+    static_cast<PeriodicRescan *>(scan)->is_inhibited_ = false;
 }
 
 void UPnP::PeriodicRescan::enable()
@@ -41,7 +77,9 @@ void UPnP::PeriodicRescan::enable()
         return;
     }
 
-    timeout_id_ = g_timeout_add_seconds(interval_seconds_, rescan_now, this);
+    is_inhibited_ = false;
+    timeout_id_ = g_timeout_add_seconds(interval_seconds_,
+                                        rescan_now_trampoline, this);
 
     if(timeout_id_ == 0)
         msg_error(0, LOG_ERR,
