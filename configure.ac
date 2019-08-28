@@ -1,20 +1,21 @@
-#
-# Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
-#
-# This file is part of T+A List Brokers.
-#
-# T+A List Brokers is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License, version 3 as
-# published by the Free Software Foundation.
-#
-# T+A List Brokers is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with T+A List Brokers.  If not, see <http://www.gnu.org/licenses/>.
-#
+dnl Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+dnl
+dnl This file is part of T+A List Brokers.
+dnl
+dnl This program is free software; you can redistribute it and/or
+dnl modify it under the terms of the GNU General Public License
+dnl as published by the Free Software Foundation; either version 2
+dnl of the License, or (at your option) any later version.
+dnl
+dnl This program is distributed in the hope that it will be useful,
+dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+dnl GNU General Public License for more details.
+dnl
+dnl You should have received a copy of the GNU General Public License
+dnl along with this program; if not, write to the Free Software
+dnl Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+dnl MA  02110-1301, USA.
 
 AC_PREREQ([2.69])
 AC_INIT([Listbrokers], [4.2], [r.tiemann@ta-hifi.com])
