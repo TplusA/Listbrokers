@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -481,6 +481,8 @@ ID::List DeviceList::enter_child<VolumeItemData>(LRU::Cache &cache, LRU::CacheMo
                 msg_info("Enter USB device %s", name.c_str());
             }
 
+            // false positive
+            // cppcheck-suppress shadowVar
             const auto new_id =
                 add_child_list_to_cache<VolumeList>(cache, get_cache_id(),
                         LRU::CacheMode::CACHED,
@@ -543,6 +545,8 @@ ID::List DirList::enter_child<ItemData>(LRU::Cache &cache, LRU::CacheModeRequest
                 return ID::List();
             }
 
+            // false positive
+            // cppcheck-suppress shadowVar
             std::string path;
             if(!USB::Helpers::construct_fspath_to_item(*this, item, path))
             {

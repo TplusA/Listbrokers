@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2017  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -94,7 +94,7 @@ class String
         dest.clear();
     }
 
-    const Sensitivity get_sensitivity() const { return sensitivity_; }
+    Sensitivity get_sensitivity() const { return sensitivity_; }
 
     void compute_hash(MD5::Hash &hash) const;
 

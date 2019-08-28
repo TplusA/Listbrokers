@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -1003,7 +1003,7 @@ class Cache
   private:
     static ssize_t unlink_objects_on_path_to_root(Entry *entry,
                                                   const Entry *&oldest,
-                                                  const Entry *&second_youngest);
+                                                  const Entry *&reconnect_tail_object);
     static void link_objects_on_path_to_root(Entry *entry,
                                              const Timebase::time_point &now);
     static bool pin_or_unpin_objects_on_path_to_root(const Cache &cache,

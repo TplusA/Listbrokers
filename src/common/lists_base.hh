@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2018, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -29,6 +29,7 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <algorithm>
 
 #include "lru.hh"
 #include "messages.h"
@@ -979,13 +980,10 @@ class ListTiles_
      */
     size_t find_free_tile() const
     {
-        for(const auto &t : hot_tiles_)
-        {
-            if(t.is_free())
-                return &t - hot_tiles_.begin();
-        }
-
-        return maximum_number_of_active_tiles;
+        return std::distance(
+                    hot_tiles_.begin(),
+                    std::find_if(hot_tiles_.begin(), hot_tiles_.end(),
+                                 [] (const auto &t) { return t.is_free(); }));
     }
 
     class SyncThreads
@@ -1070,8 +1068,8 @@ class ListTiles_
      *     tile, or \p total_number_of_items of items in case \p direction is
      *     #ListTiles_::ItemLocation::NIL.
      */
-    ID::Item index_in_adjacent_tile(ID::Item idx, size_t total_number_of_items,
-                                    ItemLocation direction)
+    static ID::Item index_in_adjacent_tile(ID::Item idx, size_t total_number_of_items,
+                                           ItemLocation direction)
     {
         ID::Item item(total_number_of_items);
 
@@ -1265,11 +1263,8 @@ class ListTiles_
   public:
     bool empty() const
     {
-        for(const auto &t : active_tiles_)
-            if(t != nullptr)
-                return false;
-
-        return true;
+        return std::all_of(active_tiles_.begin(), active_tiles_.end(),
+                           std::equal_to<ListTile_<T, tile_size> *>(nullptr));
     }
 
     bool prefetch(const TiledListFillerIface<T> &filler, ID::List list_id,

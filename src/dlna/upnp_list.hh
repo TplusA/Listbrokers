@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -86,12 +86,11 @@ class ServerItemData
     ServerItemData(const ServerItemData &src) = delete;
     ServerItemData &operator=(const ServerItemData &src) = delete;
 
-    ServerItemData(ServerItemData &&src)
+    ServerItemData(ServerItemData &&src):
+        dbus_proxy_(src.dbus_proxy_),
+        server_quirks_(std::move(src.server_quirks_))
     {
-        dbus_proxy_ = src.dbus_proxy_;
         src.dbus_proxy_ = nullptr;
-
-        server_quirks_ = std::move(src.server_quirks_);
     }
 
     ServerItemData &operator=(ServerItemData &&src)

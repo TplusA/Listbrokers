@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -106,7 +106,7 @@ class Work
 
     virtual ~Work() {}
 
-    const State get_state() const { return state_; }
+    State get_state() const { return state_; }
 
     bool has_finished() const
     {

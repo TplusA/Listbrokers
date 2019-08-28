@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -554,10 +554,9 @@ gboolean dbusmethod_navlists_get_uris(tdbuslistsNavigation *object,
     std::vector<const gchar *> list_of_uris_for_dbus;
 
     if(!error.failed())
-    {
-        for(const auto &uri : uris)
-            list_of_uris_for_dbus.push_back(uri.get_cleartext().c_str());
-    }
+        std::transform(uris.begin(), uris.end(),
+                       std::back_inserter(list_of_uris_for_dbus),
+                       [] (const auto &uri) { return uri.get_cleartext().c_str(); });
 
     list_of_uris_for_dbus.push_back(NULL);
 
@@ -589,10 +588,10 @@ gboolean dbusmethod_navlists_get_ranked_stream_links(tdbuslistsNavigation *objec
 
     if(!error.failed())
     {
-        for(const auto &link : links)
+        for(const auto &l : links)
             g_variant_builder_add(&builder, "(uus)",
-                                  link.get_rank(), link.get_bitrate(),
-                                  link.get_stream_link().url_.get_cleartext().c_str());
+                                  l.get_rank(), l.get_bitrate(),
+                                  l.get_stream_link().url_.get_cleartext().c_str());
     }
 
     GVariant *list_of_links_for_dbus = g_variant_builder_end(&builder);

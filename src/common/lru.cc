@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -78,11 +78,10 @@ LRU::Cache::Cache(size_t memory_hard_upper_limit,
     root_object_(nullptr),
     oldest_object_(nullptr),
     deepest_youngest_object_(nullptr),
+    minimum_required_creation_time_(timebase->now()),
     total_size_(0),
     is_garbage_collector_running_(false)
-{
-    minimum_required_creation_time_ = timebase->now();
-}
+{}
 
 LRU::Cache::~Cache()
 {}
@@ -371,7 +370,10 @@ ID::List LRU::Cache::insert_again(std::shared_ptr<Entry> &&entry)
                                                        entry->get_cache_id().get_context()));
 
     const auto new_id = entry->get_cache_id();
-    const auto inserted = all_objects_.insert(std::move(std::make_pair(new_id, std::move(entry))));
+#ifndef NDEBUG
+    const auto inserted =
+#endif /* !NDEBUG */
+    all_objects_.insert(std::move(std::make_pair(new_id, std::move(entry))));
     log_assert(inserted.second);
 
     if(old_id == pinned_object_id_)
@@ -644,8 +646,9 @@ bool LRU::Cache::toposort_for_purge(const std::vector<ID::List>::iterator &kill_
      */
     std::vector<std::pair<size_t, ID::List>> sorted_by_distance;
 
-    for(const auto &it : nodes_distances)
-        sorted_by_distance.emplace_back(it.second, ID::List(it.first));
+    std::transform(nodes_distances.begin(), nodes_distances.end(),
+        std::back_inserter(sorted_by_distance),
+        [] (const auto &it) { return std::make_pair(it.second, ID::List(it.first)); });
 
     std::sort(sorted_by_distance.begin(), sorted_by_distance.end());
 
@@ -720,20 +723,6 @@ void LRU::Cache::dump_pointers(std::ostream &os, const char *detail) const
     os << "===========================" << std::endl;
 }
 
-static size_t count_children(const std::shared_ptr<LRU::Entry> obj,
-                             const std::map<ID::List, std::shared_ptr<LRU::Entry>> &objects)
-{
-    size_t count = 0;
-
-    for(const auto it : objects)
-    {
-        if(it.second->get_parent() == obj)
-            ++count;
-    }
-
-    return count;
-}
-
 void LRU::Cache::self_check() const
 {
     static const char fail_message_format[] = "Cache inconsistent: %d";
@@ -795,7 +784,9 @@ void LRU::Cache::self_check() const
         FAIL_IF(obj->get_cache_id() != it.first);
         FAIL_IF(obj->get_parent() == obj);
 
-        const size_t children = count_children(obj, all_objects_);
+        const size_t children =
+            std::count_if(all_objects_.begin(), all_objects_.end(),
+                [&obj] (const auto &o) { return o.second->get_parent() == obj; });
         number_of_children += children;
 
         FAIL_IF(children != obj->get_number_of_children());

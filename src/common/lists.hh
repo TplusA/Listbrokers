@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017. 2018  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -198,13 +198,10 @@ class FlatList: public LRU::Entry, public GenericList<T>
 
     const ListItem_<T> *lookup_child_by_id(ID::List child_id) const override
     {
-        for(const auto &it : items_)
-        {
-            if(it.get_child_list() == child_id)
-                return &it;
-        }
-
-        return nullptr;
+        const auto &found(std::find_if(items_.begin(), items_.end(),
+                                [child_id] (const auto &it)
+                                { return it.get_child_list() == child_id; }));
+        return found != items_.end() ? &*found : nullptr;
     }
 
     bool lookup_item_id_by_child_id(ID::List child_id, ID::Item &idx) const override
@@ -426,6 +423,8 @@ class TiledList: public LRU::Entry, public GenericList<T>
     {
         for(const auto &it : tiles_)
         {
+            /* our custom iterator doesn't work with std::find_if() atm */
+            // cppcheck-suppress useStlAlgorithm
             if(it.get_child_list() == child_id)
                 return &it;
         }
