@@ -179,7 +179,7 @@ ssize_t UPnP::DBusUPnPFiller::fill(ItemProvider<UPnP::ItemData> &item_provider,
             msg_error(ERANGE, LOG_NOTICE,
                       "Got too many child elements from UPnP server "
                       "(requested %zu, got %lu), ignoring excess elements",
-                      count, num_of_children);
+                      count, static_cast<unsigned long>(num_of_children));
             num_of_children = count;
         }
 
