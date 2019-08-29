@@ -1267,7 +1267,7 @@ class ListTiles_
     bool empty() const
     {
         return std::all_of(active_tiles_.begin(), active_tiles_.end(),
-                           std::equal_to<ListTile_<T, tile_size> *>(nullptr));
+                           [] (const auto &t) { return t == nullptr; });
     }
 
     bool prefetch(const TiledListFillerIface<T> &filler, ID::List list_id,
