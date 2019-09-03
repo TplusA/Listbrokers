@@ -22,8 +22,8 @@
 #ifndef DBUS_UPNP_IFACE_DEEP_H
 #define DBUS_UPNP_IFACE_DEEP_H
 
-#include "upnp_dleynaserver_dbus.h"
-#include "upnp_media_dbus.h"
+#include "com_intel_dleynaserver.h"
+#include "org_gnome_upnp.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -114,36 +114,38 @@ libdbus_upnp_helpers_la_SOURCES = \
 libdbus_upnp_helpers_la_CFLAGS = $(CRELAXEDWARNINGS)
 libdbus_upnp_helpers_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 
-nodist_libupnp_dleynaserver_dbus_la_SOURCES = upnp_dleynaserver_dbus.c upnp_dleynaserver_dbus.h
+nodist_libupnp_dleynaserver_dbus_la_SOURCES = com_intel_dleynaserver.c com_intel_dleynaserver.h
 libupnp_dleynaserver_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
-nodist_libupnp_media_dbus_la_SOURCES = upnp_media_dbus.c upnp_media_dbus.h
+nodist_libupnp_media_dbus_la_SOURCES = org_gnome_upnp.c org_gnome_upnp.h
 libupnp_media_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
 BUILT_SOURCES = \
     $(nodist_libupnp_dleynaserver_dbus_la_SOURCES) \
-    com_intel_dleynaserver.h com_intel_dleynaserver.md \
-    upnp_dleynaserver_dbus.stamp \
+    com_intel_dleynaserver-doc.h \
+    com_intel_dleynaserver-doc.md \
+    com_intel_dleynaserver.stamp \
     $(nodist_libupnp_media_dbus_la_SOURCES) \
-    org_gnome_upnp.h org_gnome_upnp.md \
-    upnp_media_dbus.stamp
+    org_gnome_upnp-doc.h \
+    org_gnome_upnp-doc.md \
+    org_gnome_upnp.stamp
 
 CLEANFILES = $(BUILT_SOURCES)
 
-com_intel_dleynaserver.h: upnp_dleynaserver_dbus.stamp
-com_intel_dleynaserver.md: upnp_dleynaserver_dbus.stamp
-upnp_dleynaserver_dbus.c: upnp_dleynaserver_dbus.stamp
-upnp_dleynaserver_dbus.h: upnp_dleynaserver_dbus.stamp
-upnp_dleynaserver_dbus.stamp: $(DBUS_IFACES)/com_intel_dleynaserver.xml
-	$(GDBUS_CODEGEN) --generate-c-code=upnp_dleynaserver_dbus --c-namespace tdbus_dleynaserver --interface-prefix com.intel.dLeynaServer. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o com_intel_dleynaserver.md -H com_intel_dleynaserver.h -c tdbus_dleynaserver -s com.intel.dLeynaServer. -n "$(PACKAGE_NAME) (DLNA server management)"
+com_intel_dleynaserver-doc.h: com_intel_dleynaserver.stamp
+com_intel_dleynaserver-doc.md: com_intel_dleynaserver.stamp
+com_intel_dleynaserver.c: com_intel_dleynaserver.stamp
+com_intel_dleynaserver.h: com_intel_dleynaserver.stamp
+com_intel_dleynaserver.stamp: $(DBUS_IFACES)/com_intel_dleynaserver.xml
+	$(GDBUS_CODEGEN) --generate-c-code=com_intel_dleynaserver --c-namespace tdbus_dleynaserver --interface-prefix com.intel.dLeynaServer. $<
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o com_intel_dleynaserver-doc.md -H com_intel_dleynaserver-doc.h -c tdbus_dleynaserver -s com.intel.dLeynaServer. -n "$(PACKAGE_NAME) (DLNA server management)"
 	touch $@
 
-org_gnome_upnp.h: upnp_media_dbus.stamp
-org_gnome_upnp.md: upnp_media_dbus.stamp
-upnp_media_dbus.c: upnp_media_dbus.stamp
-upnp_media_dbus.h: upnp_media_dbus.stamp
-upnp_media_dbus.stamp: $(DBUS_IFACES)/org_gnome_upnp.xml
-	$(GDBUS_CODEGEN) --generate-c-code=upnp_media_dbus --c-namespace tdbus_upnp --interface-prefix org.gnome.UPnP. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o org_gnome_upnp.md -H org_gnome_upnp.h -c tdbus_upnp -s org.gnome.UPnP. -n "$(PACKAGE_NAME) (DLNA content browsing)"
+org_gnome_upnp-doc.h: org_gnome_upnp.stamp
+org_gnome_upnp-doc.md: org_gnome_upnp.stamp
+org_gnome_upnp.c: org_gnome_upnp.stamp
+org_gnome_upnp.h: org_gnome_upnp.stamp
+org_gnome_upnp.stamp: $(DBUS_IFACES)/org_gnome_upnp.xml
+	$(GDBUS_CODEGEN) --generate-c-code=org_gnome_upnp --c-namespace tdbus_upnp --interface-prefix org.gnome.UPnP. $<
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o org_gnome_upnp-doc.md -H org_gnome_upnp-doc.h -c tdbus_upnp -s org.gnome.UPnP. -n "$(PACKAGE_NAME) (DLNA content browsing)"
 	touch $@

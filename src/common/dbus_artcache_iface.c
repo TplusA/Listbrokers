@@ -26,7 +26,6 @@
 #include "dbus_artcache_iface.h"
 #include "dbus_artcache_iface_deep.h"
 #include "dbus_common.h"
-#include "artcache_dbus.h"
 #include "messages.h"
 
 struct dbus_artcache_data_t

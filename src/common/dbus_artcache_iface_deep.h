@@ -22,7 +22,7 @@
 #ifndef DBUS_ARTCACHE_IFACE_DEEP_H
 #define DBUS_ARTCACHE_IFACE_DEEP_H
 
-#include "artcache_dbus.h"
+#include "de_tahifi_artcache.h"
 
 #ifdef __cplusplus
 extern "C" {

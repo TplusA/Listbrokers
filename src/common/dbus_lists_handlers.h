@@ -24,7 +24,7 @@
 
 #include <gio/gio.h>
 
-#include "lists_dbus.h"
+#include "de_tahifi_lists.h"
 
 /*!
  * \addtogroup dbus_handlers_navlists Handlers for de.tahifi.Lists.Navigation interface.

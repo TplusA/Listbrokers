@@ -120,21 +120,22 @@ libdbus_mounta_handlers_la_SOURCES = dbus_mounta_handlers.cc dbus_mounta_handler
 libdbus_mounta_handlers_la_CFLAGS = $(AM_CFLAGS)
 libdbus_mounta_handlers_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 
-nodist_libmounta_dbus_la_SOURCES = mounta_dbus.c mounta_dbus.h
+nodist_libmounta_dbus_la_SOURCES = de_tahifi_mounta.c de_tahifi_mounta.h
 libmounta_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
 BUILT_SOURCES = \
     $(nodist_libmounta_dbus_la_SOURCES) \
-    de_tahifi_mounta.h de_tahifi_mounta.md \
-    mounta_dbus.stamp
+    de_tahifi_mounta-doc.h \
+    de_tahifi_mounta-doc.md \
+    de_tahifi_mounta.stamp
 
 CLEANFILES = $(BUILT_SOURCES)
 
-de_tahifi_mounta.h: mounta_dbus.stamp
-de_tahifi_mounta.md: mounta_dbus.stamp
-mounta_dbus.c: mounta_dbus.stamp
-mounta_dbus.h: mounta_dbus.stamp
-mounta_dbus.stamp: $(DBUS_IFACES)/de_tahifi_mounta.xml
-	$(GDBUS_CODEGEN) --generate-c-code=mounta_dbus --c-namespace tdbus --interface-prefix de.tahifi. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_mounta.md -H de_tahifi_mounta.h -c tdbus -s de.tahifi. -n "$(PACKAGE_NAME) (T+A automounter)"
+de_tahifi_mounta-doc.h: de_tahifi_mounta.stamp
+de_tahifi_mounta-doc.md: de_tahifi_mounta.stamp
+de_tahifi_mounta.c: de_tahifi_mounta.stamp
+de_tahifi_mounta.h: de_tahifi_mounta.stamp
+de_tahifi_mounta.stamp: $(DBUS_IFACES)/de_tahifi_mounta.xml
+	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_mounta --c-namespace tdbus --interface-prefix de.tahifi. $<
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_mounta-doc.md -H de_tahifi_mounta-doc.h -c tdbus -s de.tahifi. -n "$(PACKAGE_NAME) (T+A automounter)"
 	touch $@

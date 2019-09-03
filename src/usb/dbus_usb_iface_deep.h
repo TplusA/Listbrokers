@@ -22,7 +22,7 @@
 #ifndef DBUS_USB_IFACE_DEEP_H
 #define DBUS_USB_IFACE_DEEP_H
 
-#include "mounta_dbus.h"
+#include "de_tahifi_mounta.h"
 
 #ifdef __cplusplus
 extern "C" {

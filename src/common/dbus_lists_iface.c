@@ -28,7 +28,6 @@
 #include "dbus_lists_iface.h"
 #include "dbus_lists_iface_deep.h"
 #include "dbus_common.h"
-#include "lists_dbus.h"
 #include "messages.h"
 
 struct dbus_lists_data_t

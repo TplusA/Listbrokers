@@ -29,8 +29,6 @@
 #include "dbus_upnp_iface_deep.h"
 #include "dbus_common.h"
 #include "dbus_upnp_handlers.h"
-#include "upnp_dleynaserver_dbus.h"
-#include "upnp_media_dbus.h"
 #include "messages.h"
 
 struct DBusUPnPData

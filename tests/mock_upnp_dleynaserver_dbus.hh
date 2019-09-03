@@ -22,7 +22,7 @@
 #ifndef MOCK_UPNP_DLEYNASERVER_DBUS_HH
 #define MOCK_UPNP_DLEYNASERVER_DBUS_HH
 
-#include "upnp_dleynaserver_dbus.h"
+#include "com_intel_dleynaserver.h"
 #include "mock_expectation.hh"
 
 class MockDleynaServerDBus

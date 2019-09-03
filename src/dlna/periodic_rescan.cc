@@ -25,7 +25,6 @@
 
 #include "periodic_rescan.hh"
 #include "messages.h"
-#include "upnp_dleynaserver_dbus.h"
 #include "dbus_upnp_iface_deep.h"
 #include "dbus_common.h"
 

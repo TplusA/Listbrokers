@@ -22,7 +22,7 @@
 #ifndef MOCK_LISTBROKERS_DBUS_HH
 #define MOCK_LISTBROKERS_DBUS_HH
 
-#include "lists_dbus.h"
+#include "de_tahifi_lists.h"
 #include "mock_expectation.hh"
 
 class MockListbrokersDBus

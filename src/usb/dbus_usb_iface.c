@@ -27,7 +27,6 @@
 #include "dbus_usb_iface_deep.h"
 #include "dbus_common.h"
 #include "dbus_mounta_handlers.h"
-#include "mounta_dbus.h"
 #include "messages.h"
 
 struct DBusUSBData

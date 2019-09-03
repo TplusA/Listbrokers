@@ -26,7 +26,6 @@
 
 #include "lists.hh"
 #include "enterchild_template.hh"
-#include "upnp_dleynaserver_dbus.h"
 #include "dbus_upnp_helpers.hh"
 #include "dbus_upnp_list_filler_helpers.hh"
 #include "servers_lost_and_found.hh"

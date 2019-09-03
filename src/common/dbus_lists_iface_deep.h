@@ -22,7 +22,7 @@
 #ifndef DBUS_LISTS_IFACE_DEEP_H
 #define DBUS_LISTS_IFACE_DEEP_H
 
-#include "lists_dbus.h"
+#include "de_tahifi_lists.h"
 
 #ifdef __cplusplus
 extern "C" {
