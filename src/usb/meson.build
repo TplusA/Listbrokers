@@ -21,60 +21,58 @@
 
 dbus_iface_defs_includes = include_directories('../../dbus_interfaces')
 
-strbo_lb_usb_sources = [
-    'strbo_lb_usb.cc',
-    'dbus_usb_iface.c',
-    'usb_helpers.cc',
-    '../common/main.cc',
-    '../common/cachecontrol.cc',
-    '../common/dbus_common.c',
-    '../common/messages.c',
-    '../common/messages_glib.c',
-    '../common/os.c',
-    '../common/urlstring.cc',
-    version_info
-]
-
 usb_list_lib = static_library('usb_list',
     ['usb_list.cc', 'usb_listtree.cc'],
-    include_directories: [dbus_iface_defs_includes, '../common'],
-    dependencies: glib_deps)
+    include_directories: dbus_iface_defs_includes,
+    dependencies: [glib_deps, config_h])
 
 usb_strbourl_lib = static_library('usb_strbourl',
     'strbo_url_usb.cc',
-    include_directories: [dbus_iface_defs_includes, '../common'])
+    include_directories: dbus_iface_defs_includes,
+    dependencies: config_h)
 
 dbus_mounta_handlers_lib = static_library('dbus_mounta_handlers',
     'dbus_mounta_handlers.cc',
-    include_directories: [dbus_iface_defs_includes, '../common'],
-    dependencies: glib_deps)
-
-strbo_lb_usb_libs = [
-    cacheable_lib,
-    dbus_artcache_iface_lib,
-    dbus_lists_handlers_lib,
-    dbus_lists_iface_lib,
-    dbus_mounta_handlers_lib,
-    listtree_lib,
-    lru_lib,
-    md5_lib,
-    strbourl_lib,
-    usb_list_lib,
-    usb_strbourl_lib,
-]
+    include_directories: dbus_iface_defs_includes,
+    dependencies: [glib_deps, config_h])
 
 executable(
     'strbo_lb_usb',
-    strbo_lb_usb_sources,
-    include_directories: [dbus_iface_defs_includes, '../common'],
+    [
+        'strbo_lb_usb.cc',
+        'dbus_usb_iface.c',
+        'usb_helpers.cc',
+        '../common/main.cc',
+        '../common/cachecontrol.cc',
+        '../common/dbus_common.c',
+        '../common/messages.c',
+        '../common/messages_glib.c',
+        '../common/os.c',
+        '../common/urlstring.cc',
+        version_info
+    ],
+    include_directories: dbus_iface_defs_includes,
     dependencies: [
         glib_deps,
-        curlpp_deps,
+        dependency('curlpp'),
         artcache_dbus_dep,
         debug_dbus_dep,
         lists_dbus_dep,
         mounta_dbus_dep,
+        config_h,
     ],
-    link_with: strbo_lb_usb_libs,
+    link_with: [
+        cacheable_lib,
+        dbus_artcache_iface_lib,
+        dbus_lists_handlers_lib,
+        dbus_lists_iface_lib,
+        dbus_mounta_handlers_lib,
+        listtree_lib,
+        lru_lib,
+        md5_lib,
+        strbourl_lib,
+        usb_list_lib,
+        usb_strbourl_lib,
+    ],
     install: true
 )

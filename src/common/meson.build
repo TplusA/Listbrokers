@@ -19,8 +19,11 @@
 # MA  02110-1301, USA.
 #
 
-configure_file(input: '../../config.h.meson', output: 'config.h',
-               configuration: config_data)
+config_h = declare_dependency(
+    sources: configure_file(input: '../../config.h.meson',
+                            output: 'config.h',
+                            configuration: config_data),
+    include_directories: '.')
 
 gnome = import('gnome')
 

@@ -59,51 +59,37 @@ dbus_docs += custom_target('upnp_media_docs',
         '-n', 'DLNA Server Management'
     ])
 
-strbo_lb_upnp_sources = [
-    'strbo_lb_upnp.cc',
-    'dbus_upnp_iface.c',
-    'periodic_rescan.cc',
-    '../common/main.cc',
-    '../common/cachecontrol.cc',
-    '../common/dbus_common.c',
-    '../common/messages.c',
-    '../common/messages_glib.c',
-    '../common/os.c',
-    '../common/urlstring.cc',
-    version_info
-]
-
 upnp_list_lib = static_library('upnp_list',
     ['upnp_list.cc', 'upnp_listtree.cc'],
-    include_directories: [dbus_iface_defs_includes, '../common'],
-    dependencies: glib_deps)
+    include_directories: dbus_iface_defs_includes,
+    dependencies: [glib_deps, config_h])
 
 dbus_upnp_handlers_lib = static_library('dbus_upnp_handlers',
     'dbus_upnp_handlers.cc',
-    include_directories: [dbus_iface_defs_includes, '../common'],
-    dependencies: glib_deps)
+    include_directories: dbus_iface_defs_includes,
+    dependencies: [glib_deps, config_h])
 
 dbus_upnp_helpers_lib = static_library('dbus_upnp_helpers',
     ['dbus_upnp_helpers.cc', 'dbus_upnp_list_filler.cc'],
-    include_directories: [dbus_iface_defs_includes, '../common'],
-    dependencies: glib_deps)
-
-strbo_lb_upnp_libs = [
-    dbus_artcache_iface_lib,
-    dbus_lists_handlers_lib,
-    dbus_lists_iface_lib,
-    dbus_upnp_handlers_lib,
-    dbus_upnp_helpers_lib,
-    listtree_lib,
-    lru_lib,
-    md5_lib,
-    upnp_list_lib,
-]
+    include_directories: dbus_iface_defs_includes,
+    dependencies: [glib_deps, config_h])
 
 executable(
     'strbo_lb_upnp',
-    strbo_lb_upnp_sources,
-    include_directories: [dbus_iface_defs_includes, '../common'],
+    [
+        'strbo_lb_upnp.cc',
+        'dbus_upnp_iface.c',
+        'periodic_rescan.cc',
+        '../common/main.cc',
+        '../common/cachecontrol.cc',
+        '../common/dbus_common.c',
+        '../common/messages.c',
+        '../common/messages_glib.c',
+        '../common/os.c',
+        '../common/urlstring.cc',
+        version_info
+    ],
+    include_directories: dbus_iface_defs_includes,
     dependencies: [
         glib_deps,
         artcache_dbus_dep,
@@ -111,7 +97,18 @@ executable(
         dleynaserver_dbus_dep,
         lists_dbus_dep,
         upnp_media_dbus_dep,
+        config_h,
     ],
-    link_with: strbo_lb_upnp_libs,
+    link_with: [
+        dbus_artcache_iface_lib,
+        dbus_lists_handlers_lib,
+        dbus_lists_iface_lib,
+        dbus_upnp_handlers_lib,
+        dbus_upnp_helpers_lib,
+        listtree_lib,
+        lru_lib,
+        md5_lib,
+        upnp_list_lib,
+    ],
     install: true
 )

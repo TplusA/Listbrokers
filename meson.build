@@ -42,8 +42,6 @@ glib_deps = [
     dependency('gthread-2.0'),
 ]
 
-curlpp_deps = [dependency('curlpp')]
-
 autorevision = find_program('autorevision')
 markdown = find_program('markdown')
 extract_docs = find_program('dbus_interfaces/extract_documentation.py')
