@@ -69,7 +69,7 @@ subdir('src/dlna')
 subdir('tests')
 
 custom_target('doxygen', output: 'doxygen.stamp',
-              input: [doxyfile, dbus_docs], command: doxygen)
+              input: doxyfile, depends: dbus_docs, command: doxygen)
 
 custom_target('documentation',
     output: 'README.html', input: 'README.md',

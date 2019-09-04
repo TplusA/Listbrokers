@@ -19,7 +19,22 @@
 # MA  02110-1301, USA.
 #
 
-dbus_iface_defs_includes = include_directories('../../dbus_interfaces')
+mounta_dbus_src = gnome.gdbus_codegen('de_tahifi_mounta',
+    sources: '../../dbus_interfaces/de_tahifi_mounta.xml',
+    interface_prefix: 'de.tahifi.',
+    namespace: 'tdbus')
+mounta_dbus_lib = static_library('mounta_dbus',
+    mounta_dbus_src,
+    include_directories: '../common',
+    dependencies: glib_deps, c_args: relaxed_dbus_warnings)
+mounta_dbus_dep = declare_dependency(link_with: mounta_dbus_lib)
+dbus_docs += custom_target('de_tahifi_mounta_docs',
+    input: '../../dbus_interfaces/de_tahifi_mounta.xml',
+    output: ['@BASENAME@-doc.md', '@BASENAME@-doc.h'],
+    command: [
+        extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
+        '-c', 'tdbus', '-s', 'de.tahifi.', '-n', 'T+A Automounter'
+    ])
 
 usb_list_lib = static_library('usb_list',
     ['usb_list.cc', 'usb_listtree.cc'],

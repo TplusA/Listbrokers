@@ -19,10 +19,6 @@
 # MA  02110-1301, USA.
 #
 
-gnome = import('gnome')
-
-dbus_iface_defs_includes = include_directories('../../dbus_interfaces')
-
 dleynaserver_dbus_src = gnome.gdbus_codegen('com_intel_dleynaserver',
     sources: '../../dbus_interfaces/com_intel_dleynaserver.xml',
     interface_prefix: 'com.intel.dLeynaServer.',
