@@ -778,7 +778,7 @@ INPUT_ENCODING         = UTF-8
 # *.md, *.mm, *.dox, *.py, *.f90, *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf,
 # *.qsf, *.as and *.js.
 
-FILE_PATTERNS          =
+FILE_PATTERNS          = *.cc *.c *.hh *.h *.md
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -794,13 +794,12 @@ RECURSIVE              = YES
 # run.
 
 EXCLUDE                = \
-    @abs_builddir@/src/common/debug_dbus.c \
-    @abs_builddir@/src/common/artcache_dbus.c \
-    @abs_builddir@/src/common/lists_dbus.c \
-    @abs_builddir@/src/usb/mounta_dbus.c \
-    @abs_builddir@/src/dlna/upnp_dleynaserver_dbus.c \
-    @abs_builddir@/src/dlna/upnp_media_dbus.c \
-    @abs_srcdir@/dbus_interfaces/*.xml
+    @abs_builddir@/src/common/de_tahifi_artcache.c \
+    @abs_builddir@/src/common/de_tahifi_debug.c \
+    @abs_builddir@/src/common/de_tahifi_lists.c \
+    @abs_builddir@/src/usb/de_tahifi_mounta.c \
+    @abs_builddir@/src/dlna/com_intel_dleynaserver.c \
+    @abs_builddir@/src/dlna/org_gnome_upnp.c
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
