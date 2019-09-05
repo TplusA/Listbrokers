@@ -28,8 +28,7 @@
 
 #include "main.hh"
 
-#include "dbus_usb_iface.h"
-#include "dbus_mounta_handlers.hh"
+#include "dbus_usb_iface.hh"
 #include "usb_helpers.hh"
 #include "messages_glib.h"
 #include "versioninfo.h"
@@ -51,7 +50,7 @@ class USBListTreeData: public ListTreeData
 class USBDBusData: public DBusData
 {
   public:
-    std::unique_ptr<struct DBusMounTASignalData> mounta_signal_data_;
+    std::unique_ptr<struct DBusMounTA::SignalData> mounta_signal_data_;
 
     ~USBDBusData() {}
 
@@ -62,7 +61,7 @@ class USBDBusData: public DBusData
         if(ret < 0)
             return ret;
 
-        mounta_signal_data_.reset(new DBusMounTASignalData(*static_cast<USBListTreeData &>(ltd).list_tree_.get()));
+        mounta_signal_data_ = std::make_unique<DBusMounTA::SignalData>(*static_cast<USBListTreeData &>(ltd).list_tree_.get());
 
         if(mounta_signal_data_ == nullptr)
             return msg_out_of_memory("D-Bus USB signal data");
@@ -96,21 +95,21 @@ static int create_list_tree_and_cache(USBListTreeData &lt, GMainLoop *loop)
     static constexpr size_t default_maximum_size_mib = 5UL * 1024UL * 1024UL;
     static constexpr size_t default_maximum_number_of_lists = 500;
 
-    lt.cache_.reset(new LRU::Cache(default_maximum_size_mib,
-                                   default_maximum_number_of_lists,
-                                   std::chrono::minutes(15)));
+    lt.cache_ = std::make_unique<LRU::Cache>(default_maximum_size_mib,
+                                             default_maximum_number_of_lists,
+                                             std::chrono::minutes(15));
     if(lt.cache_ == nullptr)
         return msg_out_of_memory("LRU cache");
 
-    lt.cache_control_.reset(new LRU::CacheControl(*lt.cache_, loop));
+    lt.cache_control_ = std::make_unique<LRU::CacheControl>(*lt.cache_, loop);
     if(lt.cache_control_ == nullptr)
         return msg_out_of_memory("LRU cache control");
 
-    lt.cache_check_.reset(new Cacheable::CheckNoOverrides());
+    lt.cache_check_ = std::make_unique<Cacheable::CheckNoOverrides>();
     if(lt.cache_check_ == nullptr)
         return msg_out_of_memory("Cacheable check");
 
-    lt.list_tree_.reset(new USB::ListTree(*lt.cache_, *lt.cache_check_));
+    lt.list_tree_ = std::make_unique<USB::ListTree>(*lt.cache_, *lt.cache_check_);
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("USB list tree");
 
@@ -242,6 +241,6 @@ int LBApp::setup_application_data(DBusData *&dbus_data, ListTreeData *&lt_data,
 
 void LBApp::dbus_setup(DBusData &dbd)
 {
-    dbus_mounta_setup(true, dbd.dbus_object_path_,
-                      static_cast<USBDBusData &>(dbd).mounta_signal_data_.get());
+    DBusUSB::dbus_setup(true, dbd.dbus_object_path_,
+                        static_cast<USBDBusData &>(dbd).mounta_signal_data_.get());
 }

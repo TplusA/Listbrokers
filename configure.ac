@@ -22,7 +22,7 @@ AC_INIT([Listbrokers], [4.2], [r.tiemann@ta-hifi.com])
 AC_CONFIG_AUX_DIR([config])
 AM_INIT_AUTOMAKE([1.11 -Wall foreign])
 AM_SILENT_RULES([yes])
-AC_CONFIG_SRCDIR([src/common/dbus_lists_iface.c])
+AC_CONFIG_SRCDIR([src/common/dbus_lists_iface.cc])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 

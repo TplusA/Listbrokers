@@ -23,8 +23,6 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include <cstring>
-
 #include "dbus_lists_handlers.hh"
 #include "dbus_lists_iface_deep.h"
 #include "dbus_common.h"
@@ -38,7 +36,7 @@
 class NavListsWork: public DBusAsync::Work
 {
   protected:
-    struct DBusNavlistsIfaceData *data_;
+    DBusNavlists::IfaceData *data_;
 
   public:
     const DBusAsync::NavLists iface_id_;
@@ -76,9 +74,9 @@ static void enter_handler(GDBusMethodInvocation *invocation)
               g_dbus_method_invocation_get_method_name(invocation));
 }
 
-gboolean dbusmethod_navlists_get_list_contexts(tdbuslistsNavigation *object,
-                                               GDBusMethodInvocation *invocation,
-                                               struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_list_contexts(tdbuslistsNavigation *object,
+                                         GDBusMethodInvocation *invocation,
+                                         IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -119,8 +117,9 @@ class GetRangeWork: public NavListsWork
         count_(0)
     {}
 
-    void setup(tdbuslistsNavigation *dbus_proxy, GDBusMethodInvocation *dbus_invocation,
-               struct DBusNavlistsIfaceData *data,
+    void setup(tdbuslistsNavigation *dbus_proxy,
+               GDBusMethodInvocation *dbus_invocation,
+               DBusNavlists::IfaceData *data,
                ID::List list_id, ID::Item first_item_id, size_t count)
     {
         DBusAsync::Work::setup(G_OBJECT(dbus_proxy), dbus_invocation);
@@ -172,11 +171,10 @@ class GetRangeWork: public NavListsWork
     }
 };
 
-gboolean dbusmethod_navlists_get_range(tdbuslistsNavigation *object,
-                                       GDBusMethodInvocation *invocation,
-                                       guint list_id, guint first_item_id,
-                                       guint count,
-                                       struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_range(tdbuslistsNavigation *object,
+                                 GDBusMethodInvocation *invocation,
+                                 guint list_id, guint first_item_id,
+                                 guint count, IfaceData *data)
 {
     static GetRangeWork async_work;
 
@@ -208,12 +206,11 @@ gboolean dbusmethod_navlists_get_range(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_range_with_meta_data(tdbuslistsNavigation *object,
-                                                      GDBusMethodInvocation *invocation,
-                                                      guint list_id,
-                                                      guint first_item_id,
-                                                      guint count,
-                                                      struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_range_with_meta_data(tdbuslistsNavigation *object,
+                                                GDBusMethodInvocation *invocation,
+                                                guint list_id,
+                                                guint first_item_id,
+                                                guint count, IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -265,11 +262,10 @@ gboolean dbusmethod_navlists_get_range_with_meta_data(tdbuslistsNavigation *obje
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_check_range(tdbuslistsNavigation *object,
-                                         GDBusMethodInvocation *invocation,
-                                         guint list_id, guint first_item_id,
-                                         guint count,
-                                         struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::check_range(tdbuslistsNavigation *object,
+                                   GDBusMethodInvocation *invocation,
+                                   guint list_id, guint first_item_id,
+                                   guint count, IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -316,7 +312,7 @@ class GetItemWork: public NavListsWork
     {}
 
     void setup(tdbuslistsNavigation *dbus_proxy, GDBusMethodInvocation *dbus_invocation,
-               struct DBusNavlistsIfaceData *data,
+               DBusNavlists::IfaceData *data,
                ID::List list_id, ID::Item item_id)
     {
         DBusAsync::Work::setup(G_OBJECT(dbus_proxy), dbus_invocation);
@@ -385,10 +381,9 @@ class GetItemWork: public NavListsWork
     }
 };
 
-gboolean dbusmethod_navlists_get_list_id(tdbuslistsNavigation *object,
-                                         GDBusMethodInvocation *invocation,
-                                         guint list_id, guint item_id,
-                                         struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_list_id(tdbuslistsNavigation *object,
+                                   GDBusMethodInvocation *invocation,
+                                   guint list_id, guint item_id, IfaceData *data)
 {
     static GetItemWork async_work;
 
@@ -419,11 +414,11 @@ gboolean dbusmethod_navlists_get_list_id(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_parameterized_list_id(tdbuslistsNavigation *object,
-                                                       GDBusMethodInvocation *invocation,
-                                                       guint list_id, guint item_id,
-                                                       const gchar *parameter,
-                                                       struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_parameterized_list_id(tdbuslistsNavigation *object,
+                                                 GDBusMethodInvocation *invocation,
+                                                 guint list_id, guint item_id,
+                                                 const gchar *parameter,
+                                                 IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -461,10 +456,9 @@ gboolean dbusmethod_navlists_get_parameterized_list_id(tdbuslistsNavigation *obj
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_parent_link(tdbuslistsNavigation *object,
-                                             GDBusMethodInvocation *invocation,
-                                             guint list_id,
-                                             struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_parent_link(tdbuslistsNavigation *object,
+                                       GDBusMethodInvocation *invocation,
+                                       guint list_id, IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -494,10 +488,10 @@ gboolean dbusmethod_navlists_get_parent_link(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_root_link_to_context(tdbuslistsNavigation *object,
-                                                      GDBusMethodInvocation *invocation,
-                                                      const gchar *context,
-                                                      struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_root_link_to_context(tdbuslistsNavigation *object,
+                                                GDBusMethodInvocation *invocation,
+                                                const gchar *context,
+                                                IfaceData *data)
 {
     ID::Item item_id;
     bool context_is_known;
@@ -539,10 +533,9 @@ gboolean dbusmethod_navlists_get_root_link_to_context(tdbuslistsNavigation *obje
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_uris(tdbuslistsNavigation *object,
-                                      GDBusMethodInvocation *invocation,
-                                      guint list_id, guint item_id,
-                                      struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_uris(tdbuslistsNavigation *object,
+                                GDBusMethodInvocation *invocation,
+                                guint list_id, guint item_id, IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -571,10 +564,10 @@ gboolean dbusmethod_navlists_get_uris(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_ranked_stream_links(tdbuslistsNavigation *object,
-                                                     GDBusMethodInvocation *invocation,
-                                                     guint list_id, guint item_id,
-                                                     struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_ranked_stream_links(tdbuslistsNavigation *object,
+                                               GDBusMethodInvocation *invocation,
+                                               guint list_id, guint item_id,
+                                               IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -610,10 +603,9 @@ gboolean dbusmethod_navlists_get_ranked_stream_links(tdbuslistsNavigation *objec
 /*!
  * Handler for de.tahifi.Lists.Navigation.DiscardList().
  */
-gboolean dbusmethod_navlists_discard_list(tdbuslistsNavigation *object,
-                                          GDBusMethodInvocation *invocation,
-                                          guint list_id,
-                                          struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::discard_list(tdbuslistsNavigation *object,
+                                    GDBusMethodInvocation *invocation,
+                                    guint list_id, IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -626,10 +618,9 @@ gboolean dbusmethod_navlists_discard_list(tdbuslistsNavigation *object,
 /*!
  * Handler for de.tahifi.Lists.Navigation.KeepAlive().
  */
-gboolean dbusmethod_navlists_keep_alive(tdbuslistsNavigation *object,
-                                        GDBusMethodInvocation *invocation,
-                                        GVariant *list_ids,
-                                        struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::keep_alive(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  GVariant *list_ids, IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -664,10 +655,10 @@ gboolean dbusmethod_navlists_keep_alive(tdbuslistsNavigation *object,
 /*!
  * Handler for de.tahifi.Lists.Navigation.ForceInCache().
  */
-gboolean dbusmethod_navlists_force_in_cache(tdbuslistsNavigation *object,
-                                            GDBusMethodInvocation *invocation,
-                                            guint list_id, gboolean force,
-                                            struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::force_in_cache(tdbuslistsNavigation *object,
+                                      GDBusMethodInvocation *invocation,
+                                      guint list_id, gboolean force,
+                                      IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -687,11 +678,11 @@ gboolean dbusmethod_navlists_force_in_cache(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_location_key(tdbuslistsNavigation *object,
-                                              GDBusMethodInvocation *invocation,
-                                              guint list_id, guint item_id,
-                                              gboolean as_reference_key,
-                                              struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_location_key(tdbuslistsNavigation *object,
+                                        GDBusMethodInvocation *invocation,
+                                        guint list_id, guint item_id,
+                                        gboolean as_reference_key,
+                                        IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -726,11 +717,11 @@ gboolean dbusmethod_navlists_get_location_key(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_get_location_trace(tdbuslistsNavigation *object,
-                                                GDBusMethodInvocation *invocation,
-                                                guint list_id, guint item_id,
-                                                guint ref_list_id, guint ref_item_id,
-                                                struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::get_location_trace(tdbuslistsNavigation *object,
+                                          GDBusMethodInvocation *invocation,
+                                          guint list_id, guint item_id,
+                                          guint ref_list_id, guint ref_item_id,
+                                          IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -789,7 +780,7 @@ class RealizeLocationWork: public NavListsWork
 
     uint32_t setup(tdbuslistsNavigation *dbus_proxy,
                    GDBusMethodInvocation *dbus_invocation,
-                   struct DBusNavlistsIfaceData *data, const char *url)
+                   DBusNavlists::IfaceData *data, const char *url)
     {
         DBusAsync::Work::setup(G_OBJECT(dbus_proxy), dbus_invocation);
         data_ = data;
@@ -845,10 +836,10 @@ class RealizeLocationWork: public NavListsWork
 
 static RealizeLocationWork async_realize_location_work;
 
-gboolean dbusmethod_navlists_realize_location(tdbuslistsNavigation *object,
-                                              GDBusMethodInvocation *invocation,
-                                              const gchar *location_url,
-                                              struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::realize_location(tdbuslistsNavigation *object,
+                                        GDBusMethodInvocation *invocation,
+                                        const gchar *location_url,
+                                        IfaceData *data)
 {
     enter_handler(invocation);
 
@@ -884,10 +875,9 @@ gboolean dbusmethod_navlists_realize_location(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-gboolean dbusmethod_navlists_abort_realize_location(tdbuslistsNavigation *object,
-                                                    GDBusMethodInvocation *invocation,
-                                                    guint cookie,
-                                                    struct DBusNavlistsIfaceData *data)
+gboolean DBusNavlists::abort_realize_location(tdbuslistsNavigation *object,
+                                              GDBusMethodInvocation *invocation,
+                                              guint cookie, IfaceData *data)
 {
     enter_handler(invocation);
 

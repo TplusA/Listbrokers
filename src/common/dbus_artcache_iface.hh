@@ -19,19 +19,21 @@
  * MA  02110-1301, USA.
  */
 
-#ifndef DBUS_ARTCACHE_IFACE_H
-#define DBUS_ARTCACHE_IFACE_H
+#ifndef DBUS_ARTCACHE_IFACE_HH
+#define DBUS_ARTCACHE_IFACE_HH
 
-#include <stdbool.h>
+/*!
+ * \addtogroup dbus
+ */
+/*!@{*/
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace DBusArtCache
+{
 
-void dbus_artcache_setup(bool connect_to_session_bus);
+void dbus_setup(bool connect_to_session_bus);
 
-#ifdef __cplusplus
 }
-#endif
 
-#endif /* !DBUS_ARTCACHE_IFACE_H */
+/*!@}*/
+
+#endif /* !DBUS_ARTCACHE_IFACE_HH */

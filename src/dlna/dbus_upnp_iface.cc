@@ -25,10 +25,9 @@
 
 #include <string.h>
 
-#include "dbus_upnp_iface.h"
+#include "dbus_upnp_iface.hh"
 #include "dbus_upnp_iface_deep.h"
 #include "dbus_common.h"
-#include "dbus_upnp_handlers.h"
 #include "messages.h"
 
 struct DBusUPnPData
@@ -38,7 +37,7 @@ struct DBusUPnPData
     GDBusConnection *connection;
     guint dleyna_watcher;
     tdbusdleynaserverManager *dleynaserver_manager_iface;
-    struct DBusUPnPSignalData *signal_data;
+    DBusUPnP::SignalData *signal_data;
     bool is_connecting;
     void (*dleyna_status_watcher)(bool, void *);
     void *dleyna_status_watcher_data;
@@ -50,7 +49,7 @@ static void vanished(GDBusConnection *connection, const gchar *name,
 static void created_dleyna_proxy(GObject *source_object, GAsyncResult *res,
                                  gpointer user_data)
 {
-    struct DBusUPnPData *data = user_data;
+    auto *data = static_cast<DBusUPnPData *>(user_data);
     GError *error = NULL;
 
     data->is_connecting = false;
@@ -61,7 +60,7 @@ static void created_dleyna_proxy(GObject *source_object, GAsyncResult *res,
     {
         data->connection = g_dbus_proxy_get_connection(G_DBUS_PROXY(data->dleynaserver_manager_iface));
         g_signal_connect(data->dleynaserver_manager_iface, "g-signal",
-                         G_CALLBACK(dbussignal_dleynaserver_manager),
+                         G_CALLBACK(DBusUPnP::dleynaserver_manager_signal),
                          data->signal_data);
         data->dleyna_status_watcher(true, data->dleyna_status_watcher_data);
     }
@@ -72,7 +71,7 @@ static void created_dleyna_proxy(GObject *source_object, GAsyncResult *res,
 static void vanished(GDBusConnection *connection, const gchar *name,
                      gpointer user_data)
 {
-    struct DBusUPnPData *data = user_data;
+    auto *data = static_cast<DBusUPnPData *>(user_data);
 
     if(data->is_connecting)
         return;
@@ -83,7 +82,7 @@ static void vanished(GDBusConnection *connection, const gchar *name,
         data->dleyna_status_watcher(false, data->dleyna_status_watcher_data);
         g_object_unref(data->dleynaserver_manager_iface);
         data->dleynaserver_manager_iface = NULL;
-        dbussignal_dleynaserver_vanished(data->signal_data);
+        DBusUPnP::dleynaserver_vanished(data->signal_data);
     }
 
     data->is_connecting = true;
@@ -96,7 +95,8 @@ static void vanished(GDBusConnection *connection, const gchar *name,
 static void bus_acquired(GDBusConnection *connection, const gchar *name,
                          bool is_session_bus, gpointer user_data)
 {
-    struct DBusUPnPData *data = user_data;
+    auto *data = static_cast<DBusUPnPData *>(user_data);
+
     data->connection = connection;
     data->dleyna_watcher =
         g_bus_watch_name(is_session_bus ? G_BUS_TYPE_SESSION : G_BUS_TYPE_SYSTEM,
@@ -105,7 +105,7 @@ static void bus_acquired(GDBusConnection *connection, const gchar *name,
                          NULL, vanished, user_data, NULL);
 }
 
-static struct DBusUPnPData dbus_upnp_data;
+static DBusUPnPData dbus_upnp_data;
 
 static void shutdown_dbus(bool is_session_bus, gpointer user_data)
 {
@@ -122,10 +122,10 @@ static void shutdown_dbus(bool is_session_bus, gpointer user_data)
  * \todo
  *     Should call com.intel.dLeynaServer.Manager.SetProtocolInfo().
  */
-void dbus_upnp_setup(bool connect_to_session_bus, const char *dbus_object_path,
-                     struct DBusUPnPSignalData *signal_data,
-                     void (*dleyna_status_watcher)(bool, void *),
-                     void *dleyna_status_watcher_data)
+void DBusUPnP::dbus_setup(bool connect_to_session_bus, const char *dbus_object_path,
+                          SignalData *signal_data,
+                          void (*dleyna_status_watcher)(bool, void *),
+                          void *dleyna_status_watcher_data)
 {
     dbus_upnp_data.dbus_object_path = dbus_object_path;
     dbus_upnp_data.connection = NULL;
@@ -139,8 +139,10 @@ void dbus_upnp_setup(bool connect_to_session_bus, const char *dbus_object_path,
     const struct dbus_register_submodule_t self =
     {
         .connect_to_session_bus = connect_to_session_bus,
-        .bus_acquired = bus_acquired,
         .user_data = &dbus_upnp_data,
+        .bus_acquired = bus_acquired,
+        .name_acquired = nullptr,
+        .destroy_notification = nullptr,
         .shutdown = shutdown_dbus,
     };
 

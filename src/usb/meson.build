@@ -55,7 +55,7 @@ executable(
     'strbo_lb_usb',
     [
         'strbo_lb_usb.cc',
-        'dbus_usb_iface.c',
+        'dbus_usb_iface.cc',
         'usb_helpers.cc',
         '../common/main.cc',
         '../common/cachecontrol.cc',

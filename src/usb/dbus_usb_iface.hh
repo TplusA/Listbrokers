@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -19,27 +19,24 @@
  * MA  02110-1301, USA.
  */
 
-#ifndef DBUS_DEBUG_LEVELS_H
-#define DBUS_DEBUG_LEVELS_H
+#ifndef DBUS_USB_IFACE_HH
+#define DBUS_USB_IFACE_HH
 
-#include "dbus_common.h"
+#include "dbus_mounta_handlers.hh"
 
 /*!
  * \addtogroup dbus
  */
 /*!@{*/
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace DBusUSB
+{
 
-void dbus_debug_levels_setup(bool connect_to_session_bus,
-                             const char *dbus_object_path);
+void dbus_setup(bool connect_to_session_bus, const char *dbus_object_path,
+                DBusMounTA::SignalData *signal_data);
 
-#ifdef __cplusplus
 }
-#endif
 
 /*!@}*/
 
-#endif /* !DBUS_DEBUG_LEVELS_H */
+#endif /* !DBUS_USB_IFACE_HH */

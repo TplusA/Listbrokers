@@ -34,8 +34,8 @@ bin_PROGRAMS = strbo_lb_upnp
 
 strbo_lb_upnp_SOURCES = \
     strbo_lb_upnp.cc \
-    dbus_upnp_iface.c \
-    dbus_upnp_iface.h \
+    dbus_upnp_iface.cc \
+    dbus_upnp_iface.hh \
     dbus_upnp_iface_deep.h \
     periodic_rescan.cc \
     periodic_rescan.hh \
@@ -104,7 +104,7 @@ libupnp_list_la_SOURCES = \
 libupnp_list_la_CFLAGS = $(AM_CFLAGS)
 libupnp_list_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 
-libdbus_upnp_handlers_la_SOURCES = dbus_upnp_handlers.cc dbus_upnp_handlers.hh dbus_upnp_handlers.h
+libdbus_upnp_handlers_la_SOURCES = dbus_upnp_handlers.cc dbus_upnp_handlers.hh
 libdbus_upnp_handlers_la_CFLAGS = $(AM_CFLAGS)
 libdbus_upnp_handlers_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 

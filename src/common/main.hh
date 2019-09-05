@@ -52,7 +52,7 @@ class ListTreeData
 class DBusData
 {
   protected:
-    std::unique_ptr<struct DBusNavlistsIfaceData> navlists_iface_data_;
+    std::unique_ptr<DBusNavlists::IfaceData> navlists_iface_data_;
 
   public:
     static const char dbus_bus_name_[];
@@ -69,7 +69,7 @@ class DBusData
 
     virtual int init(ListTreeData &ltd);
 
-    struct DBusNavlistsIfaceData *get_navlists_iface_data() const
+    DBusNavlists::IfaceData *get_navlists_iface_data() const
     {
         return navlists_iface_data_.get();
     }

@@ -58,7 +58,7 @@ libstrbourl_la_CFLAGS = $(AM_CFLAGS)
 libstrbourl_la_CXXFLAGS = $(AM_CXXFLAGS)
 
 libdbus_lists_handlers_la_SOURCES = \
-    dbus_lists_handlers.cc dbus_lists_handlers.hh dbus_lists_handlers.h \
+    dbus_lists_handlers.cc dbus_lists_handlers.hh \
     listtree_glue.hh listtree_glue.cc \
     dbus_async_work.hh \
     urlstring.hh i18nstring.hh ranked_stream_links.hh md5.hh \
@@ -67,12 +67,12 @@ libdbus_lists_handlers_la_CFLAGS = $(AM_CFLAGS)
 libdbus_lists_handlers_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 
 libdbus_lists_iface_la_SOURCES = \
-    dbus_lists_iface.c dbus_lists_iface.h dbus_lists_iface_deep.h
+    dbus_lists_iface.cc dbus_lists_iface_deep.h
 libdbus_lists_iface_la_CFLAGS = $(CRELAXEDWARNINGS)
 libdbus_lists_iface_la_CXXFLAGS = $(AM_CXXFLAGS)
 
 libdbus_artcache_iface_la_SOURCES = \
-    dbus_artcache_iface.c dbus_artcache_iface.h dbus_artcache_iface_deep.h
+    dbus_artcache_iface.cc dbus_artcache_iface.hh dbus_artcache_iface_deep.h
 libdbus_artcache_iface_la_CFLAGS = $(CRELAXEDWARNINGS)
 libdbus_artcache_iface_la_CXXFLAGS = $(AM_CXXFLAGS)
 
@@ -100,7 +100,7 @@ nodist_libartcache_dbus_la_SOURCES = de_tahifi_artcache.c de_tahifi_artcache.h
 libartcache_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
 libdebug_dbus_la_SOURCES = \
-    dbus_debug_levels.c dbus_debug_levels.h \
+    dbus_debug_levels.cc dbus_debug_levels.hh \
     messages_dbus.c messages_dbus.h
 nodist_libdebug_dbus_la_SOURCES = de_tahifi_debug.c de_tahifi_debug.h
 libdebug_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)

@@ -29,14 +29,10 @@
 #include "dbus_common.h"
 #include "messages.h"
 
-void dbussignal_mounta(GDBusProxy *proxy, const gchar *sender_name,
-                       const gchar *signal_name, GVariant *parameters,
-                       gpointer user_data)
+void DBusMounTA::signal_handler(GDBusProxy *proxy, const gchar *sender_name,
+                                const gchar *signal_name, GVariant *parameters,
+                                SignalData *data)
 {
-    log_assert(user_data != NULL);
-
-    auto *const data = static_cast<struct DBusMounTASignalData *>(user_data);
-
     static const char iface_name[] = "de.tahifi.MounTA";
 
     msg_vinfo(MESSAGE_LEVEL_TRACE,

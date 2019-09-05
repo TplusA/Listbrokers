@@ -74,7 +74,7 @@ executable(
     'strbo_lb_upnp',
     [
         'strbo_lb_upnp.cc',
-        'dbus_upnp_iface.c',
+        'dbus_upnp_iface.cc',
         'periodic_rescan.cc',
         '../common/main.cc',
         '../common/cachecontrol.cc',

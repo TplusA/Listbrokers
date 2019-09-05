@@ -22,24 +22,42 @@
 #ifndef DBUS_MOUNTA_HANDLERS_HH
 #define DBUS_MOUNTA_HANDLERS_HH
 
-#include "dbus_mounta_handlers.h"
 #include "usb_listtree.hh"
 
 /*!
- * Structure passed to D-Bus signal handlers concerning USB mounts.
- *
- * This structure is only usable in C++, but the C part needs to know its name
- * to pass it on in a safe way. In pure C code, only an opaque pointer type to
- * \c struct \c DBusMounTASignalData is declared. In C++, the structure
- * itself may be used.
+ * \addtogroup dbus
  */
-struct DBusMounTASignalData
+/*!@{*/
+
+namespace DBusMounTA
+{
+
+/*!
+ * \addtogroup dbus_handlers_mounta Handlers for de.tahifi.MounTA interface.
+ * \ingroup dbus_handlers
+ */
+/*!@{*/
+
+/*!
+ * Structure passed to D-Bus signal handlers concerning USB mounts.
+ */
+struct SignalData
 {
     USB::ListTree &usb_list_tree_;
 
-    explicit DBusMounTASignalData(USB::ListTree &usb_list_tree):
+    explicit SignalData(USB::ListTree &usb_list_tree):
         usb_list_tree_(usb_list_tree)
     {}
 };
+
+void signal_handler(GDBusProxy *proxy, const gchar *sender_name,
+                    const gchar *signal_name, GVariant *parameters,
+                    SignalData *data);
+
+/*!@}*/
+
+}
+
+/*!@}*/
 
 #endif /* !DBUS_MOUNTA_HANDLERS_HH */

@@ -22,6 +22,7 @@
 #ifndef MOCK_DBUS_LISTS_IFACE_HH
 #define MOCK_DBUS_LISTS_IFACE_HH
 
+#include "dbus_lists_handlers.hh"
 #include "dbus_lists_iface_deep.h"
 #include "mock_expectation.hh"
 
@@ -45,7 +46,7 @@ class MockDBusListsIface
 
     void expect_dbus_lists_setup(bool connect_to_session_bus,
                                  const char *dbus_object_path,
-                                 struct DBusNavlistsIfaceData *iface_data);
+                                 DBusNavlists::IfaceData *iface_data);
     void expect_dbus_lists_get_navigation_iface(tdbuslistsNavigation *);
 };
 

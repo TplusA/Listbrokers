@@ -23,7 +23,8 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include "dbus_debug_levels.h"
+#include "dbus_debug_levels.hh"
+#include "dbus_common.h"
 #include "messages_dbus.h"
 
 struct dbus_debug_levels_data_t
@@ -37,7 +38,7 @@ struct dbus_debug_levels_data_t
 static void export_self(GDBusConnection *connection, const gchar *name,
                         bool is_session_bus, gpointer user_data)
 {
-    struct dbus_debug_levels_data_t *const data = user_data;
+    auto *const data = static_cast<dbus_debug_levels_data_t *>(user_data);
 
     data->debug_logging_iface = tdbus_debug_logging_skeleton_new();
 
@@ -52,7 +53,7 @@ static void export_self(GDBusConnection *connection, const gchar *name,
 static void created_debug_config_proxy(GObject *source_object, GAsyncResult *res,
                                        gpointer user_data)
 {
-    struct dbus_debug_levels_data_t *const data = user_data;
+    auto *const data = static_cast<dbus_debug_levels_data_t *>(user_data);
     GError *error = NULL;
 
     data->debug_logging_config_proxy =
@@ -78,7 +79,7 @@ static void connect_dbus_signals(GDBusConnection *connection,
 
 static void shutdown_dbus(bool is_session_bus, gpointer user_data)
 {
-    struct dbus_debug_levels_data_t *const data = user_data;
+    auto *const data = static_cast<dbus_debug_levels_data_t *>(user_data);
 
     g_object_unref(data->debug_logging_iface);
 
@@ -86,10 +87,10 @@ static void shutdown_dbus(bool is_session_bus, gpointer user_data)
         g_object_unref(data->debug_logging_config_proxy);
 }
 
-static struct dbus_debug_levels_data_t dbus_debug_levels_data;
+static dbus_debug_levels_data_t dbus_debug_levels_data;
 
-void dbus_debug_levels_setup(bool connect_to_session_bus,
-                             const char *dbus_object_path)
+void DBusDebugLevels::dbus_setup(bool connect_to_session_bus,
+                                 const char *dbus_object_path)
 {
     dbus_debug_levels_data.dbus_object_path = dbus_object_path;
     dbus_debug_levels_data.debug_logging_iface = NULL;
@@ -101,6 +102,7 @@ void dbus_debug_levels_setup(bool connect_to_session_bus,
         .user_data = &dbus_debug_levels_data,
         .bus_acquired = export_self,
         .name_acquired = connect_dbus_signals,
+        .destroy_notification = nullptr,
         .shutdown = shutdown_dbus,
     };
 

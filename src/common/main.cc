@@ -26,9 +26,8 @@
 #include <glib-unix.h>
 
 #include "main.hh"
-#include "dbus_lists_iface.h"
-#include "dbus_artcache_iface.h"
-#include "dbus_debug_levels.h"
+#include "dbus_artcache_iface.hh"
+#include "dbus_debug_levels.hh"
 #include "dbus_common.h"
 
 static Timebase real_timebase;
@@ -49,7 +48,7 @@ static GMainLoop *create_glib_main_loop()
 
 int DBusData::init(ListTreeData &ltd)
 {
-    navlists_iface_data_.reset(new DBusNavlistsIfaceData(ltd.get_list_tree()));
+    navlists_iface_data_ = std::make_unique<DBusNavlists::IfaceData>(ltd.get_list_tree());
 
     if(navlists_iface_data_ == nullptr)
         return msg_out_of_memory("D-Bus navigation interface data");
@@ -64,9 +63,9 @@ static int initialize_dbus(DBusData &dbd, ListTreeData &ltd, GMainLoop *loop)
     if(dbd.init(ltd) < 0)
         return -1;
 
-    dbus_debug_levels_setup(true, dbd.dbus_object_path_);
-    dbus_artcache_setup(true);
-    dbus_lists_setup(true, dbd.dbus_object_path_, dbd.get_navlists_iface_data());
+    DBusDebugLevels::dbus_setup(true, dbd.dbus_object_path_);
+    DBusArtCache::dbus_setup(true);
+    DBusNavlists::dbus_setup(true, dbd.dbus_object_path_, dbd.get_navlists_iface_data());
     LBApp::dbus_setup(dbd);
     dbus_common_setup(loop, dbd.dbus_bus_name_);
 

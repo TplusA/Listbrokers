@@ -32,14 +32,10 @@
 #include "dbus_common.h"
 #include "messages.h"
 
-void dbussignal_dleynaserver_manager(GDBusProxy *proxy, const gchar *sender_name,
-                                     const gchar *signal_name, GVariant *parameters,
-                                     gpointer user_data)
+void DBusUPnP::dleynaserver_manager_signal(
+        GDBusProxy *proxy, const gchar *sender_name,
+        const gchar *signal_name, GVariant *parameters, SignalData *data)
 {
-    log_assert(user_data != NULL);
-
-    DBusUPnPSignalData &data = *static_cast<DBusUPnPSignalData *>(user_data);
-
     static const char iface_name[] = "com.intel.dLeynaServer.Manager";
 
     msg_vinfo(MESSAGE_LEVEL_TRACE,
@@ -57,7 +53,7 @@ void dbussignal_dleynaserver_manager(GDBusProxy *proxy, const gchar *sender_name
          * handler */
         std::vector<std::string> new_servers;
         new_servers.push_back(str);
-        data.upnp_list_tree_.add_to_server_list(new_servers);
+        data->upnp_list_tree_.add_to_server_list(new_servers);
 
         g_variant_unref(val);
     }
@@ -73,7 +69,7 @@ void dbussignal_dleynaserver_manager(GDBusProxy *proxy, const gchar *sender_name
          * handler */
         std::vector<std::string> lost_servers;
         lost_servers.push_back(str);
-        data.upnp_list_tree_.remove_from_server_list(lost_servers);
+        data->upnp_list_tree_.remove_from_server_list(lost_servers);
 
         g_variant_unref(val);
     }
@@ -81,7 +77,7 @@ void dbussignal_dleynaserver_manager(GDBusProxy *proxy, const gchar *sender_name
         dbus_common_unknown_signal(iface_name, signal_name, sender_name);
 }
 
-void dbussignal_dleynaserver_vanished(struct DBusUPnPSignalData *data)
+void DBusUPnP::dleynaserver_vanished(SignalData *data)
 {
     data->upnp_list_tree_.clear();
 }

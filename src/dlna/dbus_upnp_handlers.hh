@@ -22,24 +22,43 @@
 #ifndef DBUS_UPNP_HANDLERS_HH
 #define DBUS_UPNP_HANDLERS_HH
 
-#include "dbus_upnp_handlers.h"
 #include "upnp_listtree.hh"
 
 /*!
- * Structure passed to D-Bus signal handlers concerning UPnP.
- *
- * This structure is only usable in C++, but the C part needs to know its name
- * to pass it on in a safe way. In pure C code, only an opaque pointer type to
- * \c struct \c DBusUPnPSignalData is declared. In C++, the structure
- * itself may be used.
+ * \addtogroup dbus
  */
-struct DBusUPnPSignalData
+/*!@{*/
+
+namespace DBusUPnP
+{
+
+/*!
+ * \addtogroup dbus_handlers_dlna Handlers for com.intel.dLeynaServer.Manager interface.
+ * \ingroup dbus_handlers
+ */
+/*!@{*/
+
+/*!
+ * Structure passed to D-Bus signal handlers concerning UPnP.
+ */
+struct SignalData
 {
     UPnP::ListTree &upnp_list_tree_;
 
-    explicit DBusUPnPSignalData(UPnP::ListTree &upnp_list_tree):
+    explicit SignalData(UPnP::ListTree &upnp_list_tree):
         upnp_list_tree_(upnp_list_tree)
     {}
 };
+
+void dleynaserver_manager_signal(GDBusProxy *proxy, const gchar *sender_name,
+                                 const gchar *signal_name, GVariant *parameters,
+                                 SignalData *data);
+void dleynaserver_vanished(SignalData *data);
+
+/*!@}*/
+
+}
+
+/*!@}*/
 
 #endif /* !DBUS_UPNP_HANDLERS_HH */

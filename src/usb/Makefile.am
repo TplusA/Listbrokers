@@ -38,8 +38,8 @@ bin_PROGRAMS = strbo_lb_usb
 
 strbo_lb_usb_SOURCES = \
     strbo_lb_usb.cc \
-    dbus_usb_iface.c \
-    dbus_usb_iface.h \
+    dbus_usb_iface.cc \
+    dbus_usb_iface.hh \
     dbus_usb_iface_deep.h \
     usb_helpers.cc \
     usb_helpers.hh \
@@ -116,7 +116,7 @@ libusb_strbourl_la_SOURCES = \
 libusb_strbourl_la_CFLAGS = $(AM_CFLAGS)
 libusb_strbourl_la_CXXFLAGS = $(AM_CXXFLAGS)
 
-libdbus_mounta_handlers_la_SOURCES = dbus_mounta_handlers.cc dbus_mounta_handlers.hh dbus_mounta_handlers.h
+libdbus_mounta_handlers_la_SOURCES = dbus_mounta_handlers.cc dbus_mounta_handlers.hh
 libdbus_mounta_handlers_la_CFLAGS = $(AM_CFLAGS)
 libdbus_mounta_handlers_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 

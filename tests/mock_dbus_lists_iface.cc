@@ -69,14 +69,14 @@ class MockDBusListsIface::Expectation
     tdbuslistsNavigation *const ret_dbus_object_;
     const std::string arg_dbus_object_path_;
     const bool arg_connect_to_session_bus_;
-    struct DBusNavlistsIfaceData *const arg_navlists_iface_data_;
+    DBusNavlists::IfaceData *const arg_navlists_iface_data_;
 
     Expectation(const Expectation &) = delete;
     Expectation &operator=(const Expectation &) = delete;
 
     explicit Expectation(bool connect_to_session_bus,
                          const char *dbus_object_path,
-                         struct DBusNavlistsIfaceData *iface_data):
+                         DBusNavlists::IfaceData *iface_data):
         function_id_(DBusListsFn::setup),
         ret_dbus_object_(nullptr),
         arg_dbus_object_path_(dbus_object_path),
@@ -120,7 +120,7 @@ void MockDBusListsIface::check() const
 
 void MockDBusListsIface::expect_dbus_lists_setup(bool connect_to_session_bus,
                                                  const char *dbus_object_path,
-                                                 struct DBusNavlistsIfaceData *iface_data)
+                                                 DBusNavlists::IfaceData *iface_data)
 {
     expectations_->add(Expectation(connect_to_session_bus, dbus_object_path, iface_data));
 }
@@ -133,9 +133,9 @@ void MockDBusListsIface::expect_dbus_lists_get_navigation_iface(tdbuslistsNaviga
 
 MockDBusListsIface *mock_dbus_lists_iface_singleton = nullptr;
 
-void dbus_lists_setup(bool connect_to_session_bus,
-                      const char *dbus_object_path,
-                      struct DBusNavlistsIfaceData *iface_data)
+void DBusNavlists::dbus_setup(bool connect_to_session_bus,
+                              const char *dbus_object_path,
+                              IfaceData *iface_data)
 {
     const auto &expect(mock_dbus_lists_iface_singleton->expectations_->get_next_expectation(__func__));
 

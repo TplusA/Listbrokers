@@ -23,7 +23,7 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include "dbus_artcache_iface.h"
+#include "dbus_artcache_iface.hh"
 #include "dbus_artcache_iface_deep.h"
 #include "dbus_common.h"
 #include "messages.h"
@@ -37,7 +37,7 @@ static void connect_to_artcache(GDBusConnection *connection,
                                 const gchar *name,
                                 bool is_session_bus, gpointer user_data)
 {
-    struct dbus_artcache_data_t *const data = user_data;
+    auto *const data = static_cast<dbus_artcache_data_t *>(user_data);
 
     GError *error = NULL;
 
@@ -51,14 +51,14 @@ static void connect_to_artcache(GDBusConnection *connection,
 
 static void shutdown_dbus(bool is_session_bus, gpointer user_data)
 {
-    struct dbus_artcache_data_t *const data = user_data;
+    auto *const data = static_cast<dbus_artcache_data_t *>(user_data);
 
     g_object_unref(data->write_proxy);
 }
 
 static struct dbus_artcache_data_t dbus_artcache_data;
 
-void dbus_artcache_setup(bool connect_to_session_bus)
+void DBusArtCache::dbus_setup(bool connect_to_session_bus)
 {
     dbus_artcache_data.write_proxy = NULL;
 
@@ -66,7 +66,9 @@ void dbus_artcache_setup(bool connect_to_session_bus)
     {
         .connect_to_session_bus = connect_to_session_bus,
         .user_data = &dbus_artcache_data,
+        .bus_acquired = nullptr,
         .name_acquired = connect_to_artcache,
+        .destroy_notification = nullptr,
         .shutdown = shutdown_dbus,
     };
 

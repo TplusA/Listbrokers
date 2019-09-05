@@ -23,10 +23,9 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include "dbus_usb_iface.h"
+#include "dbus_usb_iface.hh"
 #include "dbus_usb_iface_deep.h"
 #include "dbus_common.h"
-#include "dbus_mounta_handlers.h"
 #include "messages.h"
 
 struct DBusUSBData
@@ -34,14 +33,14 @@ struct DBusUSBData
     const char *dbus_object_path;
 
     tdbusMounTA *mounta_iface;
-    struct DBusMounTASignalData *signal_data;
+    DBusMounTA::SignalData *signal_data;
 };
 
 static void connect_dbus_signals(GDBusConnection *connection,
                                  const gchar *name, bool is_session_bus,
                                  gpointer user_data)
 {
-    struct DBusUSBData *data = user_data;
+    auto *data = static_cast<DBusUSBData *>(user_data);
 
     GError *error = NULL;
 
@@ -52,20 +51,20 @@ static void connect_dbus_signals(GDBusConnection *connection,
     (void)dbus_common_handle_error(&error);
 
     g_signal_connect(data->mounta_iface, "g-signal",
-                     G_CALLBACK(dbussignal_mounta), data->signal_data);
+                     G_CALLBACK(DBusMounTA::signal_handler), data->signal_data);
 }
 
 static void shutdown_dbus(bool is_session_bus, gpointer user_data)
 {
-    struct DBusUSBData *data = user_data;
+    auto *data = static_cast<DBusUSBData *>(user_data);
 
     g_object_unref(data->mounta_iface);
 }
 
-static struct DBusUSBData dbus_usb_data;
+static DBusUSBData dbus_usb_data;
 
-void dbus_mounta_setup(bool connect_to_session_bus, const char *dbus_object_path,
-                       struct DBusMounTASignalData *signal_data)
+void DBusUSB::dbus_setup(bool connect_to_session_bus, const char *dbus_object_path,
+                         DBusMounTA::SignalData *signal_data)
 {
     dbus_usb_data.dbus_object_path = dbus_object_path;
     dbus_usb_data.mounta_iface = NULL;
@@ -74,8 +73,10 @@ void dbus_mounta_setup(bool connect_to_session_bus, const char *dbus_object_path
     const struct dbus_register_submodule_t self =
     {
         .connect_to_session_bus = connect_to_session_bus,
-        .name_acquired = connect_dbus_signals,
         .user_data = &dbus_usb_data,
+        .bus_acquired = nullptr,
+        .name_acquired = connect_dbus_signals,
+        .destroy_notification = nullptr,
         .shutdown = shutdown_dbus,
     };
 

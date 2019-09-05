@@ -28,8 +28,7 @@
 
 #include "main.hh"
 
-#include "dbus_upnp_iface.h"
-#include "dbus_upnp_handlers.hh"
+#include "dbus_upnp_iface.hh"
 #include "periodic_rescan.hh"
 #include "messages_glib.h"
 #include "versioninfo.h"
@@ -51,7 +50,7 @@ class UPnPListTreeData: public ListTreeData
 class UPnPDBusData: public DBusData
 {
   public:
-    std::unique_ptr<struct DBusUPnPSignalData> upnp_signal_data_;
+    std::unique_ptr<DBusUPnP::SignalData> upnp_signal_data_;
 
     ~UPnPDBusData() {}
 
@@ -62,7 +61,7 @@ class UPnPDBusData: public DBusData
         if(ret < 0)
             return ret;
 
-        upnp_signal_data_.reset(new DBusUPnPSignalData(*static_cast<UPnPListTreeData &>(ltd).list_tree_.get()));
+        upnp_signal_data_ = std::make_unique<DBusUPnP::SignalData>(*static_cast<UPnPListTreeData &>(ltd).list_tree_.get());
 
         if(upnp_signal_data_ == nullptr)
             return msg_out_of_memory("D-Bus UPnP signal data");
@@ -260,7 +259,7 @@ void LBApp::dbus_setup(DBusData &dbd)
     static std::unique_ptr<UPnP::PeriodicRescan> periodic_rescan;
     periodic_rescan = std::make_unique<UPnP::PeriodicRescan>(10 * 60);
 
-    dbus_upnp_setup(true, dbd.dbus_object_path_,
-                    static_cast<UPnPDBusData &>(dbd).upnp_signal_data_.get(),
-                    dleyna_status_watcher, periodic_rescan.get());
+    DBusUPnP::dbus_setup(true, dbd.dbus_object_path_,
+                         static_cast<UPnPDBusData &>(dbd).upnp_signal_data_.get(),
+                         dleyna_status_watcher, periodic_rescan.get());
 }

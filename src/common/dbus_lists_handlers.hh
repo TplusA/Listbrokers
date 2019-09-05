@@ -22,24 +22,105 @@
 #ifndef DBUS_LISTS_HANDLERS_HH
 #define DBUS_LISTS_HANDLERS_HH
 
-#include "dbus_lists_handlers.h"
 #include "listtree.hh"
+#include "de_tahifi_lists.h"
+
+/*!
+ * \addtogroup dbus
+ */
+/*!@{*/
+
+namespace DBusNavlists
+{
 
 /*!
  * Structure passed to D-Bus method handlers concerning list navigation.
- *
- * This structure is only usable in C++, but the C part needs to know its name
- * to pass it on in a safe way. In pure C code, only an opaque pointer type to
- * \c struct \c DBusNavlistsIfaceData is declared. In C++, the structure
- * itself may be used.
  */
-struct DBusNavlistsIfaceData
+struct IfaceData
 {
     ListTreeIface &listtree_;
 
-    explicit DBusNavlistsIfaceData(ListTreeIface &lt):
+    explicit IfaceData(ListTreeIface &lt):
         listtree_(lt)
     {}
 };
+
+void init();
+void dbus_setup(bool connect_to_session_bus, const char *dbus_object_path,
+                IfaceData *iface_data);
+void shutdown();
+
+/*!
+ * \addtogroup dbus_handlers_navlists Handlers for de.tahifi.Lists.Navigation interface.
+ * \ingroup dbus_handlers
+ */
+/*!@{*/
+
+extern "C" {
+
+gboolean get_list_contexts(tdbuslistsNavigation *object,
+                           GDBusMethodInvocation *invocation, IfaceData *data);
+gboolean get_range(tdbuslistsNavigation *object,
+                   GDBusMethodInvocation *invocation, guint list_id,
+                   guint first_item_id, guint count, IfaceData *data);
+gboolean get_range_with_meta_data(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  guint list_id, guint first_item_id,
+                                  guint count, IfaceData *data);
+gboolean check_range(tdbuslistsNavigation *object,
+                     GDBusMethodInvocation *invocation,
+                     guint list_id, guint first_item_id, guint count,
+                     IfaceData *data);
+gboolean get_list_id(tdbuslistsNavigation *object,
+                     GDBusMethodInvocation *invocation,
+                     guint list_id, guint item_id, IfaceData *data);
+gboolean get_parameterized_list_id(tdbuslistsNavigation *object,
+                                   GDBusMethodInvocation *invocation,
+                                   guint list_id, guint item_id,
+                                   const gchar *parameter, IfaceData *data);
+gboolean get_parent_link(tdbuslistsNavigation *object,
+                         GDBusMethodInvocation *invocation,
+                         guint list_id, IfaceData *data);
+gboolean get_root_link_to_context(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  const gchar *context, IfaceData *data);
+gboolean get_uris(tdbuslistsNavigation *object,
+                  GDBusMethodInvocation *invocation,
+                  guint list_id, guint item_id, IfaceData *data);
+gboolean get_ranked_stream_links(tdbuslistsNavigation *object,
+                                 GDBusMethodInvocation *invocation,
+                                 guint list_id, guint item_id, IfaceData *data);
+gboolean discard_list(tdbuslistsNavigation *object,
+                      GDBusMethodInvocation *invocation,
+                      guint list_id, IfaceData *data);
+gboolean keep_alive(tdbuslistsNavigation *object,
+                    GDBusMethodInvocation *invocation,
+                    GVariant *list_ids, IfaceData *data);
+gboolean force_in_cache(tdbuslistsNavigation *object,
+                        GDBusMethodInvocation *invocation,
+                        guint list_id, gboolean force, IfaceData *data);
+gboolean get_location_key(tdbuslistsNavigation *object,
+                          GDBusMethodInvocation *invocation,
+                          guint list_id, guint item_id, gboolean as_reference_key,
+                          IfaceData *data);
+gboolean get_location_trace(tdbuslistsNavigation *object,
+                            GDBusMethodInvocation *invocation,
+                            guint list_id, guint item_id,
+                            guint ref_list_id, guint ref_item_id,
+                            IfaceData *data);
+gboolean realize_location(tdbuslistsNavigation *object,
+                          GDBusMethodInvocation *invocation,
+                          const gchar *location_url, IfaceData *data);
+gboolean abort_realize_location(tdbuslistsNavigation *object,
+                                GDBusMethodInvocation *invocation,
+                                guint cookie, IfaceData *data);
+
+}
+
+/*!@}*/
+
+}
+
+/*!@}*/
 
 #endif /* !DBUS_LISTS_HANDLERS_HH */

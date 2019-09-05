@@ -22,21 +22,23 @@
 #ifndef DBUS_UPNP_IFACE_H
 #define DBUS_UPNP_IFACE_H
 
-#include <stdbool.h>
+#include "dbus_upnp_handlers.hh"
 
-#include "dbus_upnp_handlers.h"
+/*!
+ * \addtogroup dbus
+ */
+/*!@{*/
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace DBusUPnP
+{
 
-void dbus_upnp_setup(bool connect_to_session_bus, const char *dbus_object_path,
-                     struct DBusUPnPSignalData *signal_data,
-                     void (*dleyna_status_watcher)(bool, void *),
-                     void *dleyna_status_watcher_data);
+void dbus_setup(bool connect_to_session_bus, const char *dbus_object_path,
+                SignalData *signal_data,
+                void (*dleyna_status_watcher)(bool, void *),
+                void *dleyna_status_watcher_data);
 
-#ifdef __cplusplus
 }
-#endif
+
+/*!@}*/
 
 #endif /* !DBUS_UPNP_IFACE_H */

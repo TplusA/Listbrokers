@@ -51,7 +51,7 @@ debug_dbus_src = gnome.gdbus_codegen('de_tahifi_debug',
     interface_prefix: 'de.tahifi.Debug.',
     namespace: 'tdbus_debug')
 debug_dbus_lib = static_library('debug_dbus',
-    [debug_dbus_src, 'dbus_debug_levels.c', 'messages_dbus.c'],
+    [debug_dbus_src, 'dbus_debug_levels.cc', 'messages_dbus.c'],
     dependencies: glib_deps, c_args: relaxed_dbus_warnings)
 debug_dbus_dep = declare_dependency(link_with: debug_dbus_lib)
 dbus_docs += custom_target('de_tahifi_debug_docs',
@@ -100,11 +100,12 @@ dbus_lists_handlers_lib = static_library('dbus_lists_handlers',
     include_directories: dbus_iface_defs_includes)
 
 dbus_lists_iface_lib = static_library('dbus_lists_iface',
-    'dbus_lists_iface.c',
-    dependencies: glib_deps)
+    'dbus_lists_iface.cc',
+    dependencies: glib_deps,
+    include_directories: dbus_iface_defs_includes)
 
 dbus_artcache_iface_lib = static_library('dbus_artcache_iface',
-    'dbus_artcache_iface.c',
+    'dbus_artcache_iface.cc',
     dependencies: glib_deps)
 
 md5_lib = static_library('md5', 'md5.cc')

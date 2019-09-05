@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -19,32 +19,21 @@
  * MA  02110-1301, USA.
  */
 
-#ifndef DBUS_UPNP_HANDLERS_H
-#define DBUS_UPNP_HANDLERS_H
-
-#include <gio/gio.h>
+#ifndef DBUS_DEBUG_LEVELS_HH
+#define DBUS_DEBUG_LEVELS_HH
 
 /*!
- * \addtogroup dbus_handlers_dlna Handlers for com.intel.dLeynaServer.Manager interface.
- * \ingroup dbus_handlers
+ * \addtogroup dbus
  */
 /*!@{*/
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace DBusDebugLevels
+{
 
-struct DBusUPnPSignalData;
+void dbus_setup(bool connect_to_session_bus, const char *dbus_object_path);
 
-void dbussignal_dleynaserver_manager(GDBusProxy *proxy, const gchar *sender_name,
-                                     const gchar *signal_name, GVariant *parameters,
-                                     gpointer user_data);
-void dbussignal_dleynaserver_vanished(struct DBusUPnPSignalData *data);
-
-#ifdef __cplusplus
 }
-#endif
 
 /*!@}*/
 
-#endif /* !DBUS_UPNP_HANDLERS_H */
+#endif /* !DBUS_DEBUG_LEVELS_HH */
