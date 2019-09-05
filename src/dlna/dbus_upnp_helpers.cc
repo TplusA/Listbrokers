@@ -25,8 +25,7 @@
 
 #include "dbus_upnp_helpers.hh"
 #include "dbus_upnp_iface_deep.h"
-#include "dbus_common.h"
-#include "messages.h"
+#include "gerrorwrapper.hh"
 
 std::string UPnP::get_proxy_object_path(tdbusdleynaserverMediaDevice *proxy)
 {
@@ -66,11 +65,11 @@ tdbusdleynaserverMediaDevice *
 UPnP::create_media_device_proxy_for_object_path_end(const std::string &path,
                                                     GAsyncResult *res)
 {
-    GError *error = nullptr;
+    GErrorWrapper error;
     tdbusdleynaserverMediaDevice *proxy =
-        tdbus_dleynaserver_media_device_proxy_new_finish(res, &error);
+        tdbus_dleynaserver_media_device_proxy_new_finish(res, error.await());
 
-    if(dbus_common_handle_error(&error) == 0)
+    if(!error.log_failure("Create dLeyna media device proxy"))
         return proxy;
 
     msg_error(0, LOG_NOTICE,
@@ -104,14 +103,14 @@ UPnP::create_media_container_proxy_for_object_path(const char *path)
 
     GDBusConnection *connection = g_dbus_proxy_get_connection(proxy);
 
-    GError *error = NULL;
+    GErrorWrapper error;
 
     tdbusupnpMediaContainer2 *container_proxy =
         tdbus_upnp_media_container2_proxy_new_sync(connection,
                                                    G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS,
                                                    "com.intel.dleyna-server",
-                                                   path, NULL, &error);
-    (void)dbus_common_handle_error(&error);
+                                                   path, NULL, error.await());
+    error.log_failure("Create UPnP media container proxy");
 
     return container_proxy;
 }
@@ -125,14 +124,14 @@ UPnP::create_media_item_proxy_for_object_path(const char *path)
 
     GDBusConnection *connection = g_dbus_proxy_get_connection(proxy);
 
-    GError *error = NULL;
+    GErrorWrapper error;
 
     tdbusupnpMediaItem2 *item_proxy =
         tdbus_upnp_media_item2_proxy_new_sync(connection,
                                               G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS,
                                               "com.intel.dleyna-server",
-                                              path, NULL, &error);
-    (void)dbus_common_handle_error(&error);
+                                              path, NULL, error.await());
+    error.log_failure("Create UPnP media item proxy");
 
     return item_proxy;
 }

@@ -205,22 +205,6 @@ void dbus_common_shutdown(GMainLoop *loop)
     }
 }
 
-int dbus_common_handle_error(GError **error)
-{
-    if(*error == NULL)
-        return 0;
-
-    if((*error)->message != NULL)
-        msg_error(0, LOG_EMERG, "Got D-Bus error: %s", (*error)->message);
-    else
-        msg_error(0, LOG_EMERG, "Got D-Bus error without any message");
-
-    g_error_free(*error);
-    *error = NULL;
-
-    return -1;
-}
-
 int dbus_common_try_export_iface(GDBusConnection *connection,
                                  GDBusInterfaceSkeleton *iface,
                                  const char *dbus_object_path)

@@ -26,8 +26,8 @@
 
 #include "listtree.hh"
 #include "lists_base.hh"
-#include "dbus_common.h"
 #include "dbus_artcache_iface_deep.h"
+#include "gerrorwrapper.hh"
 
 GVariant *hash_to_variant(const ListItemKey &key);
 
@@ -40,13 +40,13 @@ static void send_cover_art(const ListItem_<T> &item,
     if(album_art_url.empty())
         return;
 
-    GError *error = nullptr;
+    GErrorWrapper error;
     tdbus_artcache_write_call_add_image_by_uri_sync(dbus_artcache_get_write_iface(),
                                                     hash_to_variant(item_key),
                                                     priority,
                                                     album_art_url.get_cleartext().c_str(),
-                                                    NULL, &error);
-    dbus_common_handle_error(&error);
+                                                    NULL, error.await());
+    error.log_failure("Send cover art");
 }
 
 #endif /* !LISTTREE_GLUE_HH */

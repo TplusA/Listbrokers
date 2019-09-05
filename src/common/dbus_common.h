@@ -54,7 +54,6 @@ void dbus_common_register_submodule(const struct dbus_register_submodule_t *subm
 int dbus_common_setup(GMainLoop *loop, const char *bus_name);
 void dbus_common_shutdown(GMainLoop *loop);
 
-int dbus_common_handle_error(GError **error);
 int dbus_common_try_export_iface(GDBusConnection *connection,
                                  GDBusInterfaceSkeleton *iface,
                                  const char *dbus_object_path);

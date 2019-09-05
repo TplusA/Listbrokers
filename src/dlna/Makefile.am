@@ -63,6 +63,7 @@ strbo_lb_upnp_SOURCES = \
     ../common/urlstring.hh \
     ../common/i18nstring.hh \
     ../common/md5.hh \
+    ../common/gerrorwrapper.hh \
     $(DBUS_IFACES)/de_tahifi_lists_errors.h \
     $(DBUS_IFACES)/de_tahifi_lists_errors.hh \
     $(DBUS_IFACES)/de_tahifi_lists_context.h \

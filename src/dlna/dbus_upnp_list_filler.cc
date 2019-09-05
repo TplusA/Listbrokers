@@ -27,10 +27,9 @@
 
 #include "dbus_upnp_list_filler.hh"
 #include "dbus_upnp_list_filler_helpers.hh"
-#include "dbus_common.h"
 #include "upnp_listtree.hh"
 #include "main.hh"
-#include "messages.h"
+#include "gerrorwrapper.hh"
 
 static UPnP::DBusUPnPFiller standard_dbus_filler;
 
@@ -156,19 +155,19 @@ ssize_t UPnP::DBusUPnPFiller::fill(ItemProvider<UPnP::ItemData> &item_provider,
 
     ssize_t retval;
 
-    GError *gerror = NULL;
+    GErrorWrapper gerror;
     const gboolean success = request_alphabetically_sorted_
         ? tdbus_upnp_media_container2_call_list_children_ex_sync(proxy,
                                                                  idx.get_raw_id(),
                                                                  count, filter,
                                                                  "+DisplayName",
                                                                  &children,
-                                                                 NULL, &gerror)
+                                                                 NULL, gerror.await())
         : tdbus_upnp_media_container2_call_list_children_sync(proxy,
                                                               idx.get_raw_id(),
                                                               count, filter,
                                                               &children,
-                                                              NULL, &gerror);
+                                                              NULL, gerror.await());
 
     if(success)
     {
@@ -201,7 +200,9 @@ ssize_t UPnP::DBusUPnPFiller::fill(ItemProvider<UPnP::ItemData> &item_provider,
     else
     {
         msg_error(0, LOG_ERR, "List children failed");
-        (void)dbus_common_handle_error(&gerror);
+        gerror.log_failure(request_alphabetically_sorted_
+                           ? "Get list of UPnP children (sorted)"
+                           : "Get list of UPnP children (unsorted)");
         retval = -1;
         error = ListError::NET_IO;
     }

@@ -26,6 +26,7 @@
 #include "dbus_debug_levels.hh"
 #include "dbus_common.h"
 #include "messages_dbus.h"
+#include "gerrorwrapper.hh"
 
 struct dbus_debug_levels_data_t
 {
@@ -54,12 +55,12 @@ static void created_debug_config_proxy(GObject *source_object, GAsyncResult *res
                                        gpointer user_data)
 {
     auto *const data = static_cast<dbus_debug_levels_data_t *>(user_data);
-    GError *error = NULL;
+    GErrorWrapper error;
 
     data->debug_logging_config_proxy =
-        tdbus_debug_logging_config_proxy_new_finish(res, &error);
+        tdbus_debug_logging_config_proxy_new_finish(res, error.await());
 
-    if(dbus_common_handle_error(&error) == 0)
+    if(!error.log_failure("Create debug logging proxy"))
         g_signal_connect(data->debug_logging_config_proxy, "g-signal",
                          G_CALLBACK(msg_dbus_handle_global_debug_level_changed),
                          NULL);

@@ -28,7 +28,7 @@
 #include "dbus_upnp_iface.hh"
 #include "dbus_upnp_iface_deep.h"
 #include "dbus_common.h"
-#include "messages.h"
+#include "gerrorwrapper.hh"
 
 struct DBusUPnPData
 {
@@ -50,13 +50,13 @@ static void created_dleyna_proxy(GObject *source_object, GAsyncResult *res,
                                  gpointer user_data)
 {
     auto *data = static_cast<DBusUPnPData *>(user_data);
-    GError *error = NULL;
+    GErrorWrapper error;
 
     data->is_connecting = false;
     data->dleynaserver_manager_iface =
-        tdbus_dleynaserver_manager_proxy_new_finish(res, &error);
+        tdbus_dleynaserver_manager_proxy_new_finish(res, error.await());
 
-    if(dbus_common_handle_error(&error) == 0)
+    if(!error.log_failure("Create dLeyna manager proxy"))
     {
         data->connection = g_dbus_proxy_get_connection(G_DBUS_PROXY(data->dleynaserver_manager_iface));
         g_signal_connect(data->dleynaserver_manager_iface, "g-signal",

@@ -26,7 +26,7 @@
 #include "dbus_artcache_iface.hh"
 #include "dbus_artcache_iface_deep.h"
 #include "dbus_common.h"
-#include "messages.h"
+#include "gerrorwrapper.hh"
 
 struct dbus_artcache_data_t
 {
@@ -39,14 +39,14 @@ static void connect_to_artcache(GDBusConnection *connection,
 {
     auto *const data = static_cast<dbus_artcache_data_t *>(user_data);
 
-    GError *error = NULL;
+    GErrorWrapper error;
 
     data->write_proxy =
         tdbus_artcache_write_proxy_new_sync(connection,
                                             G_DBUS_PROXY_FLAGS_NONE,
                                             "de.tahifi.TACAMan", "/de/tahifi/TACAMan",
-                                            NULL, &error);
-    (void)dbus_common_handle_error(&error);
+                                            NULL, error.await());
+    error.log_failure("Create TACAMan proxy");
 }
 
 static void shutdown_dbus(bool is_session_bus, gpointer user_data)

@@ -26,7 +26,7 @@
 #include "periodic_rescan.hh"
 #include "messages.h"
 #include "dbus_upnp_iface_deep.h"
-#include "dbus_common.h"
+#include "gerrorwrapper.hh"
 
 gboolean UPnP::PeriodicRescan::rescan_now_trampoline(gpointer scan)
 {
@@ -62,10 +62,10 @@ void UPnP::PeriodicRescan::rescan_done(GObject *source_object,
                                        GAsyncResult *res, gpointer scan)
 {
     msg_info("UPnP rescan finished");
-    GError *gerror = NULL;
+    GErrorWrapper gerror;
     tdbus_dleynaserver_manager_call_rescan_finish(
-        TDBUS_DLEYNASERVER_MANAGER(source_object), res, &gerror);
-    (void)dbus_common_handle_error(&gerror);
+        TDBUS_DLEYNASERVER_MANAGER(source_object), res, gerror.await());
+    gerror.log_failure("Rescan UPnP servers");
     static_cast<PeriodicRescan *>(scan)->is_inhibited_ = false;
 }
 

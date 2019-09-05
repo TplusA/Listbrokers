@@ -26,7 +26,7 @@
 #include "dbus_usb_iface.hh"
 #include "dbus_usb_iface_deep.h"
 #include "dbus_common.h"
-#include "messages.h"
+#include "gerrorwrapper.hh"
 
 struct DBusUSBData
 {
@@ -42,16 +42,15 @@ static void connect_dbus_signals(GDBusConnection *connection,
 {
     auto *data = static_cast<DBusUSBData *>(user_data);
 
-    GError *error = NULL;
+    GErrorWrapper error;
 
     data->mounta_iface =
         tdbus_moun_ta_proxy_new_sync(connection, G_DBUS_PROXY_FLAGS_NONE,
                                      "de.tahifi.MounTA", "/de/tahifi/MounTA",
-                                     NULL, &error);
-    (void)dbus_common_handle_error(&error);
-
-    g_signal_connect(data->mounta_iface, "g-signal",
-                     G_CALLBACK(DBusMounTA::signal_handler), data->signal_data);
+                                     NULL, error.await());
+    if(!error.log_failure("Create MounTA proxy"))
+        g_signal_connect(data->mounta_iface, "g-signal",
+                         G_CALLBACK(DBusMounTA::signal_handler), data->signal_data);
 }
 
 static void shutdown_dbus(bool is_session_bus, gpointer user_data)

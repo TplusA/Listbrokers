@@ -27,7 +27,6 @@
 
 #include "upnp_listtree.hh"
 #include "listtree_glue.hh"
-#include "dbus_common.h"
 #include "dbus_artcache_iface_deep.h"
 
 constexpr const char UPnP::ListTree::CONTEXT_ID[];

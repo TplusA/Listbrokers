@@ -29,8 +29,8 @@
 #include "usb_list.hh"
 #include "usb_helpers.hh"
 #include "enterchild_template.hh"
-#include "dbus_common.h"
 #include "dbus_usb_iface_deep.h"
+#include "gerrorwrapper.hh"
 
 bool USB::DeviceItemData::add_volume(uint32_t vol_id,
                                      const char *display_name_utf8,
@@ -192,13 +192,13 @@ bool USB::DeviceList::init_from_mounta()
 
     GVariant *devices = nullptr;
     GVariant *volumes = nullptr;
-    GError *error = nullptr;
+    GErrorWrapper error;
 
     tdbus_moun_ta_call_get_all_sync(dbus_usb_get_mounta_iface(),
-                                    &devices, &volumes, nullptr, &error);
-    const bool retval = ((dbus_common_handle_error(&error) == 0)
-                         ? fill_list_from_mounta_data(*this, devices, volumes)
-                         : false);
+                                    &devices, &volumes, nullptr, error.await());
+    const bool retval =
+        !error.log_failure("Get MounTA info") &&
+        fill_list_from_mounta_data(*this, devices, volumes);
 
     if(devices != nullptr)
         g_variant_unref(devices);
