@@ -60,6 +60,7 @@ libstrbourl_la_CXXFLAGS = $(AM_CXXFLAGS)
 libdbus_lists_handlers_la_SOURCES = \
     dbus_lists_handlers.cc dbus_lists_handlers.hh \
     listtree_glue.hh listtree_glue.cc \
+    gvariantwrapper.hh gvariantwrapper.cc \
     dbus_async_work.hh \
     urlstring.hh i18nstring.hh ranked_stream_links.hh md5.hh \
     listtree.hh

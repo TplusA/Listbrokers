@@ -58,8 +58,6 @@ int DBusData::init(ListTreeData &ltd)
 
 static int initialize_dbus(DBusData &dbd, ListTreeData &ltd, GMainLoop *loop)
 {
-    DBusAsync::dbus_async_worker_data.init();
-
     if(dbd.init(ltd) < 0)
         return -1;
 
@@ -116,7 +114,6 @@ int main(int argc, char *argv[])
     g_main_loop_run(loop);
 
     msg_vinfo(MESSAGE_LEVEL_IMPORTANT, "Shutting down");
-    DBusAsync::dbus_async_worker_data.shutdown();
     dbus_common_shutdown(loop);
 
     ltd->get_list_tree().shutdown_threads();

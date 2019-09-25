@@ -95,7 +95,7 @@ cacheable_lib = static_library('cacheable',
     include_directories: dbus_iface_defs_includes)
 
 dbus_lists_handlers_lib = static_library('dbus_lists_handlers',
-    ['dbus_lists_handlers.cc', 'listtree_glue.cc'],
+    ['dbus_lists_handlers.cc', 'listtree_glue.cc', 'gvariantwrapper.cc'],
     dependencies: [glib_deps, artcache_dbus_dep],
     include_directories: dbus_iface_defs_includes)
 

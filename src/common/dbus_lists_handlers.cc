@@ -28,34 +28,61 @@
 #include "ranked_stream_links.hh"
 #include "listtree_glue.hh"
 #include "messages.h"
+#include "gvariantwrapper.hh"
+
+#include <future>
 
 /*!
- * Base class for all work done by \c de.tahifi.Lists.Navigation methods.
+ * Base class template for all work done by \c de.tahifi.Lists.Navigation
+ * methods.
  */
+template <typename RT>
 class NavListsWork: public DBusAsync::Work
 {
   protected:
-    DBusNavlists::IfaceData *data_;
+    using ResultType = RT;
 
-  public:
-    const DBusAsync::NavLists iface_id_;
+    ListTreeIface &listtree_;
+    std::promise<ResultType> promise_;
+    std::future<ResultType> future_;
+
+  private:
+    bool cancellation_requested_;
 
   protected:
-    explicit NavListsWork(DBusAsync::NavLists iface_id):
-        data_(nullptr),
-        iface_id_(iface_id)
+    explicit NavListsWork(ListTreeIface &listtree):
+        listtree_(listtree),
+        promise_(std::promise<ResultType>()),
+        future_(promise_.get_future()),
+        cancellation_requested_(false)
     {}
 
   public:
-    NavListsWork(const NavListsWork &) = delete;
-    NavListsWork &operator=(const NavListsWork &) = delete;
+    NavListsWork(NavListsWork &&) = default;
+    NavListsWork &operator=(NavListsWork &&) = default;
+
+    virtual ~NavListsWork()
+    {
+        if(cancellation_requested_)
+            listtree_.pop_cancel_blocking_operation();
+    }
+
+    auto &wait()
+    {
+        future_.wait();
+        return future_;
+    }
 
     void do_cancel(std::unique_lock<std::mutex> &lock) final override
     {
-        data_->listtree_.push_cancel_blocking_operation();
-        work_finished_.wait(lock,
-                            [this] () { return get_state() != State::CANCELING; });
-        data_->listtree_.pop_cancel_blocking_operation();
+        if(cancellation_requested_)
+        {
+            BUG("Multiple cancellation requests");
+            return;
+        }
+
+        cancellation_requested_ = true;
+        listtree_.push_cancel_blocking_operation();
     }
 };
 
@@ -96,48 +123,41 @@ gboolean DBusNavlists::get_list_contexts(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-class GetRangeWork: public NavListsWork
+class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrapper>>
 {
   public:
     static constexpr const char *const DBUS_RETURN_TYPE_STRING = "a(sy)";
     static constexpr const char *const DBUS_ELEMENT_TYPE_STRING = "(sy)";
 
   private:
-    ID::List list_id_;
-    ID::Item first_item_id_;
-    size_t count_;
+    const ID::List list_id_;
+    const ID::Item first_item_id_;
+    const size_t count_;
 
   public:
-    GetRangeWork(const GetRangeWork &) = delete;
-    GetRangeWork &operator=(const GetRangeWork &) = delete;
+    GetRange(GetRange &&) = default;
+    GetRange &operator=(GetRange &&) = default;
 
-    explicit GetRangeWork():
-        NavListsWork(DBusAsync::NavLists::GET_RANGE),
-        count_(0)
-    {}
-
-    void setup(tdbuslistsNavigation *dbus_proxy,
-               GDBusMethodInvocation *dbus_invocation,
-               DBusNavlists::IfaceData *data,
-               ID::List list_id, ID::Item first_item_id, size_t count)
+    explicit GetRange(ListTreeIface &listtree, ID::List list_id,
+                      ID::Item first_item_id, size_t count):
+        NavListsWork(listtree),
+        list_id_(list_id),
+        first_item_id_(first_item_id),
+        count_(count)
     {
-        DBusAsync::Work::setup(G_OBJECT(dbus_proxy), dbus_invocation);
-        data_ = data;
-        list_id_ = list_id;
-        first_item_id_ = first_item_id;
-        count_ = count;
+        log_assert(list_id_.is_valid());
     }
 
   protected:
-    void do_run() final override
+    bool do_run() final override
     {
-        log_assert(list_id_.is_valid());
+        listtree_.use_list(list_id_, false);
 
         GVariantBuilder builder;
         g_variant_builder_init(&builder, G_VARIANT_TYPE(DBUS_RETURN_TYPE_STRING));
 
         const ListError error =
-            data_->listtree_.for_each(list_id_, first_item_id_, count_,
+            listtree_.for_each(list_id_, first_item_id_, count_,
                 [&builder] (const ListTreeIface::ForEachItemDataGeneric &item_data)
                 {
                     msg_info("for_each(): %s, %s dir", item_data.name_.c_str(),
@@ -152,21 +172,14 @@ class GetRangeWork: public NavListsWork
 
         if(error.failed())
         {
-            first_item_id_ = ID::Item();
             g_variant_unref(items_in_range);
             items_in_range = g_variant_new(DBUS_RETURN_TYPE_STRING, NULL);
         }
 
-        tdbus_lists_navigation_complete_get_range(TDBUS_LISTS_NAVIGATION(dbus_proxy_),
-                                                  dbus_invocation_,
-                                                  error.get_raw_code(),
-                                                  first_item_id_.get_raw_id(),
-                                                  items_in_range);
-
-        if(error == ListError::INTERRUPTED)
-            set_work_state(State::CANCELED);
-        else
-            set_work_state(State::DONE);
+        promise_.set_value(
+            std::make_tuple(error, error.failed() ? ID::Item() : first_item_id_,
+                            GVariantWrapper(items_in_range)));
+        return error != ListError::INTERRUPTED;
     }
 };
 
@@ -175,14 +188,12 @@ gboolean DBusNavlists::get_range(tdbuslistsNavigation *object,
                                  guint list_id, guint first_item_id,
                                  guint count, IfaceData *data)
 {
-    static GetRangeWork async_work;
-
     enter_handler(invocation);
 
     if(list_id == 0)
     {
         GVariant *const empty_range =
-            g_variant_new(GetRangeWork::DBUS_RETURN_TYPE_STRING, NULL);
+            g_variant_new(GetRange::DBUS_RETURN_TYPE_STRING, NULL);
 
         tdbus_lists_navigation_complete_get_range(object, invocation,
                                                   ListError::INVALID_ID,
@@ -190,17 +201,14 @@ gboolean DBusNavlists::get_range(tdbuslistsNavigation *object,
         return TRUE;
     }
 
-    data->listtree_.use_list(ID::List(list_id), false);
+    GetRange w(data->listtree_, ID::List(list_id), ID::Item(first_item_id), count);
+    auto &f(w.wait());
+    auto result(f.get());
 
-    auto lock(lock_worker_if_async(async_work.iface_id_,
-                                   data->listtree_.async_mask_navlists_));
-
-    DBusAsync::dbus_async_worker_data.cancel_work(async_work);
-
-    async_work.setup(object, invocation, data,
-                     ID::List(list_id), ID::Item(first_item_id), count);
-
-    DBusAsync::dbus_async_worker_data.process_work(async_work, lock);
+    tdbus_lists_navigation_complete_get_range(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            GVariantWrapper::move(std::get<2>(result)));
 
     return TRUE;
 }
@@ -296,87 +304,57 @@ gboolean DBusNavlists::check_range(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-class GetItemWork: public NavListsWork
+class GetListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::String>>
 {
   private:
-    ID::List list_id_;
-    ID::Item item_id_;
+    const ID::List list_id_;
+    const ID::Item item_id_;
 
   public:
-    GetItemWork(const GetItemWork &) = delete;
-    GetItemWork &operator=(const GetItemWork &) = delete;
+    GetListID(GetListID &&) = default;
+    GetListID &operator=(GetListID &&) = default;
 
-    explicit GetItemWork():
-        NavListsWork(DBusAsync::NavLists::GET_LIST_ID)
+    explicit GetListID(ListTreeIface &listtree,
+                       ID::List list_id, ID::Item item_id):
+        NavListsWork(listtree),
+        list_id_(list_id),
+        item_id_(item_id)
     {}
 
-    void setup(tdbuslistsNavigation *dbus_proxy, GDBusMethodInvocation *dbus_invocation,
-               DBusNavlists::IfaceData *data,
-               ID::List list_id, ID::Item item_id)
-    {
-        DBusAsync::Work::setup(G_OBJECT(dbus_proxy), dbus_invocation);
-        data_ = data;
-        list_id_ = list_id;
-        item_id_ = item_id;
-    }
-
   protected:
-    void do_run() final override
+    bool do_run() final override
     {
         if(list_id_.is_valid())
         {
-            data_->listtree_.use_list(list_id_, false);
+            listtree_.use_list(list_id_, false);
 
             ListError error;
-            const auto child_id =
-                data_->listtree_.enter_child(list_id_, item_id_, error);
+            const auto child_id = listtree_.enter_child(list_id_, item_id_, error);
 
             if(child_id.is_valid())
-            {
-                const auto title(data_->listtree_.get_child_list_title(list_id_, item_id_));
-
-                tdbus_lists_navigation_complete_get_list_id(TDBUS_LISTS_NAVIGATION(dbus_proxy_),
-                                                            dbus_invocation_,
-                                                            error.get_raw_code(),
-                                                            child_id.get_raw_id(),
-                                                            title.get_text().c_str(),
-                                                            title.is_translatable());
-            }
+                promise_.set_value(std::make_tuple(
+                    error, child_id,
+                    listtree_.get_child_list_title(list_id_, item_id_)));
             else
-                tdbus_lists_navigation_complete_get_list_id(TDBUS_LISTS_NAVIGATION(dbus_proxy_),
-                                                            dbus_invocation_,
-                                                            error.get_raw_code(),
-                                                            child_id.get_raw_id(),
-                                                            "", false);
+                promise_.set_value(std::make_tuple(
+                    error, child_id, I18n::String(false)));
 
-            if(error == ListError::INTERRUPTED)
-                set_work_state(State::CANCELED);
-            else
-                set_work_state(State::DONE);
+            return error != ListError::INTERRUPTED;
+        }
+
+        const ID::List root_list_id(listtree_.get_root_list_id());
+
+        if(root_list_id.is_valid())
+        {
+            listtree_.use_list(root_list_id, false);
+            promise_.set_value(std::make_tuple(
+                ListError(), root_list_id, listtree_.get_list_title(root_list_id)));
         }
         else
-        {
-            const ID::List root_list_id(data_->listtree_.get_root_list_id());
+            promise_.set_value(std::make_tuple(
+                ListError(), root_list_id, I18n::String(false)));
 
-            if(root_list_id.is_valid())
-            {
-                const auto title(data_->listtree_.get_list_title(root_list_id));
-
-                data_->listtree_.use_list(root_list_id, false);
-                tdbus_lists_navigation_complete_get_list_id(TDBUS_LISTS_NAVIGATION(dbus_proxy_),
-                                                            dbus_invocation_, 0,
-                                                            root_list_id.get_raw_id(),
-                                                            title.get_text().c_str(),
-                                                            title.is_translatable());
-            }
-            else
-                tdbus_lists_navigation_complete_get_list_id(TDBUS_LISTS_NAVIGATION(dbus_proxy_),
-                                                            dbus_invocation_, 0,
-                                                            root_list_id.get_raw_id(),
-                                                            "", false);
-
-            set_work_state(State::DONE);
-        }
+        return true;
     }
 };
 
@@ -384,8 +362,6 @@ gboolean DBusNavlists::get_list_id(tdbuslistsNavigation *object,
                                    GDBusMethodInvocation *invocation,
                                    guint list_id, guint item_id, IfaceData *data)
 {
-    static GetItemWork async_work;
-
     enter_handler(invocation);
 
     if(list_id == 0 && item_id != 0)
@@ -396,19 +372,15 @@ gboolean DBusNavlists::get_list_id(tdbuslistsNavigation *object,
         return TRUE;
     }
 
-    auto lock(lock_worker_if_async(async_work.iface_id_,
-                                   data->listtree_.async_mask_navlists_));
+    GetListID w(data->listtree_, ID::List(list_id), ID::Item(item_id));
+    auto &f(w.wait());
+    auto result(f.get());
 
-    DBusAsync::dbus_async_worker_data.cancel_work(async_work);
-
-    if(list_id == 0)
-        async_work.setup(object, invocation, data,
-                         ID::List(), ID::Item());
-    else
-        async_work.setup(object, invocation, data,
-                         ID::List(list_id), ID::Item(item_id));
-
-    DBusAsync::dbus_async_worker_data.process_work(async_work, lock);
+    tdbus_lists_navigation_complete_get_list_id(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            std::get<2>(result).get_text().c_str(),
+            std::get<2>(result).is_translatable());
 
     return TRUE;
 }
@@ -762,78 +734,31 @@ gboolean DBusNavlists::get_location_trace(tdbuslistsNavigation *object,
     return TRUE;
 }
 
-class RealizeLocationWork: public NavListsWork
+class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::RealizeURLResult>>
 {
   private:
-    std::string url_;
-    uint32_t cookie_;
+    const std::string url_;
 
   public:
-    RealizeLocationWork(const RealizeLocationWork &) = delete;
-    RealizeLocationWork &operator=(const RealizeLocationWork &) = delete;
+    RealizeLocation(RealizeLocation &&) = default;
+    RealizeLocation &operator=(RealizeLocation &&) = default;
 
-    explicit RealizeLocationWork():
-        NavListsWork(DBusAsync::NavLists::REALIZE_LOCATION),
-        cookie_(0)
-    {}
-
-    uint32_t setup(tdbuslistsNavigation *dbus_proxy,
-                   GDBusMethodInvocation *dbus_invocation,
-                   DBusNavlists::IfaceData *data, const char *url)
+    explicit RealizeLocation(ListTreeIface &listtree, std::string &&url):
+        NavListsWork(listtree),
+        url_(std::move(url))
     {
-        DBusAsync::Work::setup(G_OBJECT(dbus_proxy), dbus_invocation);
-        data_ = data;
-        url_ = url;
-        cookie_ = get_cookie();
-        return cookie_;
+        log_assert(!url.empty());
     }
-
-    bool matches(uint32_t cookie) const { return cookie_ == cookie; }
 
   protected:
-    void do_run() final override
+    bool do_run() final override
     {
-        log_assert(!url_.empty());
-        log_assert(cookie_ != 0);
-
         ListTreeIface::RealizeURLResult result;
-        const auto error = data_->listtree_.realize_strbo_url(url_, result);
-
-        tdbus_lists_navigation_emit_realize_location_result(TDBUS_LISTS_NAVIGATION(dbus_proxy_),
-                                                            cookie_, error.get_raw_code(),
-                                                            result.list_id.get_raw_id(),
-                                                            result.item_id.get_raw_id(),
-                                                            result.ref_list_id.get_raw_id(),
-                                                            result.ref_item_id.get_raw_id(),
-                                                            result.distance,
-                                                            result.trace_length,
-                                                            result.list_title.get_text().c_str(),
-                                                            result.list_title.is_translatable());
-
-        url_.clear();
-        cookie_ = 0;
-
-        if(error == ListError::INTERRUPTED)
-            set_work_state(State::CANCELED);
-        else
-            set_work_state(State::DONE);
-    }
-
-  private:
-    static uint32_t get_cookie()
-    {
-        static std::atomic<uint32_t> next_free_cookie_;
-
-        uint32_t id = ++next_free_cookie_;
-
-        if(id == 0)
-            ++id;
-
-        return id;
+        const auto error = listtree_.realize_strbo_url(url_, result);
+        promise_.set_value(std::make_tuple(error, std::move(result)));
+        return error != ListError::INTERRUPTED;
     }
 };
-
-static RealizeLocationWork async_realize_location_work;
 
 gboolean DBusNavlists::realize_location(tdbuslistsNavigation *object,
                                         GDBusMethodInvocation *invocation,
@@ -841,36 +766,8 @@ gboolean DBusNavlists::realize_location(tdbuslistsNavigation *object,
                                         IfaceData *data)
 {
     enter_handler(invocation);
-
-    if(location_url[0] == '\0')
-    {
-        tdbus_lists_navigation_complete_realize_location(object, invocation,
-                                                         ListError::INVALID_STRBO_URL,
-                                                         0);
-        return TRUE;
-    }
-
-    if(!data->listtree_.can_handle_strbo_url(location_url))
-    {
-        tdbus_lists_navigation_complete_realize_location(object, invocation,
-                                                         ListError::NOT_SUPPORTED,
-                                                         0);
-        return TRUE;
-    }
-
-    auto lock(lock_worker_if_async(async_realize_location_work.iface_id_,
-                                   data->listtree_.async_mask_navlists_));
-
-    DBusAsync::dbus_async_worker_data.cancel_work(async_realize_location_work);
-
-    const uint32_t cookie =
-        async_realize_location_work.setup(object, invocation, data,
-                                          location_url);
     tdbus_lists_navigation_complete_realize_location(object, invocation,
-                                                     ListError::OK, cookie);
-
-    DBusAsync::dbus_async_worker_data.process_work(async_realize_location_work, lock);
-
+                                                     ListError::INTERNAL, 0);
     return TRUE;
 }
 
@@ -880,18 +777,9 @@ gboolean DBusNavlists::abort_realize_location(tdbuslistsNavigation *object,
 {
     enter_handler(invocation);
 
-    auto lock(lock_worker_if_async(async_realize_location_work.iface_id_,
-                                   data->listtree_.async_mask_navlists_));
-
-    if(async_realize_location_work.matches(cookie))
-    {
-        DBusAsync::dbus_async_worker_data.cancel_work(async_realize_location_work);
-        tdbus_lists_navigation_complete_abort_realize_location(object, invocation);
-    }
-    else
-        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
-                                              G_DBUS_ERROR_INVALID_ARGS,
-                                              "Wrong cookie");
+    g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                          G_DBUS_ERROR_INVALID_ARGS,
+                                          "Wrong cookie");
 
     return TRUE;
 }

@@ -51,7 +51,7 @@ class ListTree: public ListTreeIface
     ListTree &operator=(const ListTree &) = delete;
 
     explicit ListTree(LRU::Cache &cache, Cacheable::CheckNoOverrides &cache_check):
-        ListTreeIface(DBusAsync::mk_async_mask(DBusAsync::NavLists::REALIZE_LOCATION)),
+        ListTreeIface(),
         lt_manager_(cache, cache_check)
     {}
 

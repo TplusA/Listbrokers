@@ -80,8 +80,8 @@ class ListTreeIface
         size_t trace_length;
         I18n::String list_title;
 
-        RealizeURLResult(const RealizeURLResult &) = delete;
-        RealizeURLResult &operator=(const RealizeURLResult &) = delete;
+        RealizeURLResult(RealizeURLResult &&) = default;
+        RealizeURLResult &operator=(RealizeURLResult &&) = default;
 
         explicit RealizeURLResult():
             item_id(UINT32_MAX),
@@ -106,18 +106,12 @@ class ListTreeIface
     std::atomic_uint cancel_blocking_operation_counter;
     const std::function<bool(void)> may_continue_fn_;
 
-    explicit ListTreeIface(DBusAsync::AsyncMask async_mask_navlists = 0,
-                           DBusAsync::AsyncMask async_mask_connman_manager = 0):
+    explicit ListTreeIface():
         cancel_blocking_operation_counter(0),
-        may_continue_fn_(std::bind(&ListTreeIface::is_blocking_operation_allowed, this)),
-        async_mask_navlists_(async_mask_navlists),
-        async_mask_connman_manager_(async_mask_connman_manager)
+        may_continue_fn_(std::bind(&ListTreeIface::is_blocking_operation_allowed, this))
     {}
 
   public:
-    const DBusAsync::AsyncMask async_mask_navlists_;
-    const DBusAsync::AsyncMask async_mask_connman_manager_;
-
     ListTreeIface(const ListTreeIface &) = delete;
     ListTreeIface &operator=(const ListTreeIface &) = delete;
 

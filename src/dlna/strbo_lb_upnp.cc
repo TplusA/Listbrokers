@@ -95,23 +95,23 @@ static int create_list_tree_and_cache(UPnPListTreeData &lt, GMainLoop *loop)
     static constexpr size_t default_maximum_size_mib = 20UL * 1024UL * 1024UL;
     static constexpr size_t default_maximum_number_of_lists = 10000;
 
-    lt.cache_.reset(new LRU::Cache(default_maximum_size_mib,
-                                   default_maximum_number_of_lists,
-                                   std::chrono::minutes(15)));
+    lt.cache_ = std::make_unique<LRU::Cache>(default_maximum_size_mib,
+                                             default_maximum_number_of_lists,
+                                             std::chrono::minutes(15));
     if(lt.cache_ == nullptr)
         return msg_out_of_memory("LRU cache");
 
-    lt.cache_control_.reset(new LRU::CacheControl(*lt.cache_, loop));
+    lt.cache_control_ = std::make_unique<LRU::CacheControl>(*lt.cache_, loop);
     if(lt.cache_control_ == nullptr)
         return msg_out_of_memory("LRU cache control");
 
-    lt.cache_check_.reset(new Cacheable::CheckNoOverrides());
+    lt.cache_check_ = std::make_unique<Cacheable::CheckNoOverrides>();
     if(lt.cache_check_ == nullptr)
         return msg_out_of_memory("Cacheable check");
 
     UPnP::init_standard_dbus_fillers(*lt.cache_);
 
-    lt.list_tree_.reset(new UPnP::ListTree(*lt.cache_, *lt.cache_check_));
+    lt.list_tree_ = std::make_unique<UPnP::ListTree>(*lt.cache_, *lt.cache_check_);
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("UPnP list tree");
 
