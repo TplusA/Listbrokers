@@ -24,24 +24,299 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "dbus_lists_handlers.hh"
-#include "dbus_lists_iface_deep.h"
+#include "dbus_lists_iface.hh"
 #include "ranked_stream_links.hh"
 #include "listtree_glue.hh"
 #include "messages.h"
 #include "gvariantwrapper.hh"
 
+#include <unordered_map>
 #include <future>
+
+class BadCookieError: public std::exception
+{
+  private:
+    const char *how_bad_;
+
+  public:
+    explicit BadCookieError(const char *how_bad): how_bad_(how_bad) {}
+    const char *what() const noexcept final override { return how_bad_; }
+};
+
+struct TimeoutError: public std::exception {};
+
+enum class WaitForMode
+{
+    ALLOW_SYNC_PROCESSING,
+    NO_SYNC,
+};
+
+class NavListsWorkBase: public DBusAsync::Work
+{
+  private:
+    ListError error_on_done_;
+
+  protected:
+    explicit NavListsWorkBase() = default;
+
+  public:
+    NavListsWorkBase(NavListsWorkBase &&) = default;
+    NavListsWorkBase &operator=(NavListsWorkBase &&) = default;
+    virtual ~NavListsWorkBase() = default;
+
+    bool success() const
+    {
+        return get_state() == State::DONE && !error_on_done_.failed();
+    }
+
+    ListError::Code get_error_code() const
+    {
+        switch(get_state())
+        {
+          case State::RUNNABLE:
+            return ListError::Code::BUSY;
+
+          case State::RUNNING:
+            return ListError::Code::BUSY_500;
+
+          case State::DONE:
+            return error_on_done_.get();
+
+          case State::CANCELING:
+          case State::CANCELED:
+            return ListError::Code::INTERRUPTED;
+        }
+
+        return ListError::Code::INTERNAL;
+    }
+
+  protected:
+    void put_error(ListError error) { error_on_done_ = error; }
+};
+
+class CookieJar
+{
+  private:
+    std::mutex lock_;
+    std::atomic<uint32_t> next_free_cookie_;
+    std::unordered_map<uint32_t, std::shared_ptr<NavListsWorkBase>> work_by_cookie_;
+
+  public:
+    CookieJar(const CookieJar &) = delete;
+    CookieJar(CookieJar &&) = default;
+    CookieJar &operator=(const CookieJar &) = delete;
+    CookieJar &operator=(CookieJar &&) = default;
+
+    explicit CookieJar():
+        next_free_cookie_(1)
+    {}
+
+    /*!
+     * Promise to do work in exchange for a cookie.
+     *
+     * The cookie is associated with the work, i.e., it identifies the work
+     * item passed this function. It may be eaten as soon as the work has been
+     * completed.
+     *
+     * \param work
+     *     A work item to be processed.
+     *
+     * \returns
+     *     A sufficiently unique value which identifies \p work. It can be used
+     *     to retrieve the results later, or cancel the work.
+     */
+    uint32_t pick_cookie_for_work(std::shared_ptr<NavListsWorkBase> &&work)
+    {
+        std::lock_guard<std::mutex> lock(lock_);
+
+        const auto cookie = bake_cookie();
+        work->set_done_notification_function(
+            [this, cookie] (bool has_completed)
+            { work_done_notification(cookie, has_completed); });
+        work_by_cookie_[cookie] = std::move(work);
+
+        return cookie;
+    }
+
+    /*!
+     * The work associated with the cookie is not going to be done.
+     *
+     * The work item the cookie was given out for is canceled. Standard
+     * cancelation mechanisms apply and the work item is going to be removed
+     * from our cookie jar later.
+     *
+     * \param cookie
+     *     No one is going to eat this.
+     */
+    void cookie_not_wanted(uint32_t cookie)
+    {
+        std::lock_guard<std::mutex> lock(lock_);
+
+        auto it(work_by_cookie_.find(cookie));
+        if(it != work_by_cookie_.end())
+            it->second->cancel();
+    }
+
+    enum class EatMode
+    {
+        WILL_WORK_FOR_COOKIES,
+        MY_SLAVE_DOES_THE_ACTUAL_WORK,
+    };
+
+    /*!
+     * Try to eat the cookie and get the result of the work.
+     *
+     * The work result is obtained by calling the \c wait_for() function of the
+     * work item. We wait for the result for up to 150 ms so that results of
+     * very small amounts of work can be made available in the context of the
+     * caller which has just added the work item. In case the result is
+     * unavailable after 150 ms, a #TimeoutError exception is thrown.
+     *
+     * A #TimeoutError is also thrown if the work item is not processed in a
+     * thread and \p allow_sync is set to false.
+     *
+     * In general, this function should be called when the work is known to be
+     * have done. Whether or not the timeout feature is useful depends entirely
+     * on the context; its intended use is the optimization of D-Bus traffic.
+     *
+     * \tparam WorkType
+     *     The work item is cast to this type, which must be derived from
+     *     #NavListsWorkBase, and the result is returned using its
+     *     \c wait_for() function member.
+     *
+     * \param cookie
+     *     A cookie previously returned by #CookieJar::pick_cookie_for_work().
+     *     In case the cookie is invalid or the work item associated with the
+     *     cookie is not of type \p WorkType, a #BadCookieError exception will
+     *     be thrown.
+     *
+     * \param eat_mode
+     *     If the work item is not processed by a worker thread, the caller
+     *     must decide whether or not it wants to process the work in its own
+     *     context. In case of #CookieJar::EatMode::WILL_WORK_FOR_COOKIES, the
+     *     caller will do the work and the function call will block until the
+     *     work has been completed or canceled. In case of
+     *     #CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK (the default),
+     *     the work will remain unprocessed and this function will throw a
+     *     #TimeoutError without actually running into a timeout.
+     *
+     * \returns
+     *     The return value of #NavListsWork<WorkType>::wait_for().
+     */
+    template <typename WorkType>
+    typename WorkType::ResultType
+    try_eat(uint32_t cookie,
+            EatMode eat_mode = EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK)
+    {
+        if(cookie == 0)
+            throw BadCookieError("bad value");
+
+        std::unique_lock<std::mutex> lock(lock_);
+
+        auto it(work_by_cookie_.find(cookie));
+        if(it == work_by_cookie_.end())
+            throw BadCookieError("unknown");
+
+        log_assert(it->second != nullptr);
+
+        auto work = std::dynamic_pointer_cast<WorkType>(it->second);
+        if(work == nullptr)
+            throw BadCookieError("wrong type");
+
+        lock.unlock();
+
+        /* this may throw a #TimeoutError */
+        auto result(work->wait_for(std::chrono::milliseconds(150),
+                                   eat_mode == EatMode::WILL_WORK_FOR_COOKIES
+                                   ? WaitForMode::ALLOW_SYNC_PROCESSING
+                                   : WaitForMode::NO_SYNC));
+
+        /* we have our result, so we "eat" our cookie now and remove its
+         * associated work item */
+        lock.lock();
+        work_by_cookie_.erase(it);
+        return result;
+    }
+
+  private:
+    /*!
+     * Callback for letting us know that some work item is done.
+     *
+     * This function is called when the work has been processed or has been
+     * canceled. It is frequently called from a work queue, either in the
+     * context of a worker thread or of the caller which has generated the work
+     * item. In general, no assumptions about context of execution must be made
+     * here.
+     */
+    void work_done_notification(uint32_t cookie, bool has_completed)
+    {
+        std::unique_lock<std::mutex> lock(lock_);
+
+        const auto &w(work_by_cookie_.find(cookie));
+
+        if(w == work_by_cookie_.end())
+        {
+            BUG("Work %s notification for unknown cookie %u",
+                has_completed ? "done" : "canceled", cookie);
+            return;
+        }
+
+        const bool success = w->second->success();
+        const auto error = has_completed
+            ? w->second->get_error_code()
+            : ListError::Code::INTERRUPTED;
+
+        if(!has_completed)
+            work_by_cookie_.erase(w);
+
+        lock.unlock();
+
+        if(success)
+            tdbus_lists_navigation_emit_data_available(
+                DBusNavlists::get_navigation_iface(),
+                g_variant_new_fixed_array(G_VARIANT_TYPE_UINT32,
+                                          &cookie, 1, sizeof(cookie)));
+        else
+        {
+            GVariantBuilder b;
+            g_variant_builder_init(&b, reinterpret_cast<const GVariantType *>("a(uy)"));
+            g_variant_builder_add(&b, "(uy)", cookie, error);
+            tdbus_lists_navigation_emit_data_error(
+                DBusNavlists::get_navigation_iface(),
+                g_variant_builder_end(&b));
+        }
+    }
+
+    uint32_t bake_cookie()
+    {
+        while(true)
+        {
+            const uint32_t cookie = next_free_cookie_++;
+
+            if(cookie == 0)
+                continue;
+
+            if(work_by_cookie_.find(cookie) != work_by_cookie_.end())
+                continue;
+
+            return cookie;
+        }
+    }
+};
+
+static CookieJar cookie_jar;
 
 /*!
  * Base class template for all work done by \c de.tahifi.Lists.Navigation
  * methods.
  */
 template <typename RT>
-class NavListsWork: public DBusAsync::Work
+class NavListsWork: public NavListsWorkBase
 {
-  protected:
+  public:
     using ResultType = RT;
 
+  protected:
     ListTreeIface &listtree_;
     std::promise<ResultType> promise_;
     std::future<ResultType> future_;
@@ -67,12 +342,64 @@ class NavListsWork: public DBusAsync::Work
             listtree_.pop_cancel_blocking_operation();
     }
 
-    auto &wait()
+    /*!
+     * Wait for completion of work.
+     *
+     * \param timeout
+     *     Wait for up to this duration. In case the timeout expires, a
+     *     #TimeoutError is thrown.
+     *
+     * \param mode
+     *     How to wait. In case of #WaitForMode::NO_SYNC, the work is expected
+     *     to be done by some thread in the background; a timeout may occur
+     *     while waiting. In case of #WaitForMode::ALLOW_SYNC_PROCESSING, the
+     *     caller of this function is going to process the work if it is in
+     *     runnable state. Note that this mode must not be used for work which
+     *     has been put into a #DBusAsync::WorkQueue.
+     */
+    auto wait_for(const std::chrono::milliseconds &timeout, WaitForMode mode)
     {
-        future_.wait();
-        return future_;
+        switch(future_.wait_for(timeout))
+        {
+          case std::future_status::timeout:
+            if(mode != WaitForMode::ALLOW_SYNC_PROCESSING)
+                break;
+
+            /* fall-through */
+
+          case std::future_status::deferred:
+            if(mode == WaitForMode::NO_SYNC)
+                break;
+
+            switch(get_state())
+            {
+              case State::RUNNABLE:
+                run();
+                break;
+
+              case State::RUNNING:
+              case State::CANCELING:
+                break;
+
+              case State::DONE:
+                BUG("Work deferred, but marked DONE");
+                break;
+
+              case State::CANCELED:
+                BUG("Work deferred, but marked CANCELED");
+                break;
+            }
+
+            /* fall-through */
+
+          case std::future_status::ready:
+            return future_.get();
+        }
+
+        throw TimeoutError();
     }
 
+  protected:
     void do_cancel(std::unique_lock<std::mutex> &lock) final override
     {
         if(cancellation_requested_)
@@ -179,6 +506,8 @@ class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrap
         promise_.set_value(
             std::make_tuple(error, error.failed() ? ID::Item() : first_item_id_,
                             GVariantWrapper(items_in_range)));
+        put_error(error);
+
         return error != ListError::INTERRUPTED;
     }
 };
@@ -202,8 +531,8 @@ gboolean DBusNavlists::get_range(tdbuslistsNavigation *object,
     }
 
     GetRange w(data->listtree_, ID::List(list_id), ID::Item(first_item_id), count);
-    auto &f(w.wait());
-    auto result(f.get());
+    auto result(w.wait_for(std::chrono::milliseconds(0),
+                           WaitForMode::ALLOW_SYNC_PROCESSING));
 
     tdbus_lists_navigation_complete_get_range(
             object, invocation, std::get<0>(result).get_raw_code(),
@@ -339,6 +668,8 @@ class GetListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::Strin
                 promise_.set_value(std::make_tuple(
                     error, child_id, I18n::String(false)));
 
+            put_error(error);
+
             return error != ListError::INTERRUPTED;
         }
 
@@ -373,9 +704,8 @@ gboolean DBusNavlists::get_list_id(tdbuslistsNavigation *object,
     }
 
     GetListID w(data->listtree_, ID::List(list_id), ID::Item(item_id));
-    auto &f(w.wait());
-    auto result(f.get());
-
+    auto result(w.wait_for(std::chrono::milliseconds(0),
+                           WaitForMode::ALLOW_SYNC_PROCESSING));
     tdbus_lists_navigation_complete_get_list_id(
             object, invocation, std::get<0>(result).get_raw_code(),
             std::get<1>(result).get_raw_id(),
@@ -747,7 +1077,7 @@ class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::
         NavListsWork(listtree),
         url_(std::move(url))
     {
-        log_assert(!url.empty());
+        log_assert(!url_.empty());
     }
 
   protected:
@@ -756,6 +1086,7 @@ class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::
         ListTreeIface::RealizeURLResult result;
         const auto error = listtree_.realize_strbo_url(url_, result);
         promise_.set_value(std::make_tuple(error, std::move(result)));
+        put_error(error);
         return error != ListError::INTERRUPTED;
     }
 };
@@ -766,20 +1097,91 @@ gboolean DBusNavlists::realize_location(tdbuslistsNavigation *object,
                                         IfaceData *data)
 {
     enter_handler(invocation);
-    tdbus_lists_navigation_complete_realize_location(object, invocation,
-                                                     ListError::INTERNAL, 0);
+
+    if(location_url[0] == '\0')
+    {
+        tdbus_lists_navigation_complete_realize_location(object, invocation,
+                                                         ListError::INVALID_STRBO_URL,
+                                                         0);
+        return TRUE;
+    }
+
+    if(!data->listtree_.can_handle_strbo_url(location_url))
+    {
+        tdbus_lists_navigation_complete_realize_location(object, invocation,
+                                                         ListError::NOT_SUPPORTED,
+                                                         0);
+        return TRUE;
+    }
+
+    auto work = std::make_shared<RealizeLocation>(data->listtree_, location_url);
+    const uint32_t cookie = cookie_jar.pick_cookie_for_work(work);
+
+    data->listtree_.q_navlists_realize_location_.add_work(
+        std::move(work),
+        [object, invocation, cookie] (bool is_async, bool is_sync_done)
+        {
+            if(is_async)
+                tdbus_lists_navigation_complete_realize_location(
+                    object, invocation, ListError::BUSY, cookie);
+            else if(is_sync_done)
+                tdbus_lists_navigation_complete_realize_location(
+                    object, invocation, ListError::OK, 0);
+        });
+
     return TRUE;
 }
 
-gboolean DBusNavlists::abort_realize_location(tdbuslistsNavigation *object,
-                                              GDBusMethodInvocation *invocation,
-                                              guint cookie, IfaceData *data)
+gboolean DBusNavlists::realize_location_by_cookie(tdbuslistsNavigation *object,
+                                                  GDBusMethodInvocation *invocation,
+                                                  guint cookie, IfaceData *data)
 {
     enter_handler(invocation);
 
-    g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
-                                          G_DBUS_ERROR_INVALID_ARGS,
-                                          "Wrong cookie");
+    try
+    {
+        auto result(cookie_jar.try_eat<RealizeLocation>(cookie));
+        const auto &url_result(std::get<1>(result));
+
+        tdbus_lists_navigation_complete_realize_location_by_cookie(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            url_result.list_id.get_raw_id(), url_result.item_id.get_raw_id(),
+            url_result.ref_list_id.get_raw_id(),
+            url_result.ref_item_id.get_raw_id(),
+            url_result.distance, url_result.trace_length,
+            url_result.list_title.get_text().c_str(),
+            url_result.list_title.is_translatable());
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        tdbus_lists_navigation_complete_realize_location_by_cookie(
+            object, invocation, ListError::BUSY,
+            0, 0, 0, 0, 0, 0, "", FALSE);
+    }
+
+    return TRUE;
+}
+
+gboolean DBusNavlists::data_abort(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  GVariant *cookies, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    GVariantIter iter;
+    g_variant_iter_init(&iter, cookies);
+    guint cookie;
+
+    while(g_variant_iter_loop(&iter,"u", &cookie))
+        cookie_jar.cookie_not_wanted(cookie);
+
+    tdbus_lists_navigation_complete_data_abort(object, invocation);
 
     return TRUE;
 }

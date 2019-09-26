@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <mutex>
+#include <functional>
 
 #include <gio/gio.h>
 
@@ -55,15 +56,15 @@ class Work
     /*! Current work item state. */
     State state_;
 
+    /*! Called when work has completed (done or canceled). */
+    std::function<void(bool)> notify_done_fn_;
+
   protected:
     std::mutex lock_;
 
     explicit Work():
         state_(State::RUNNABLE)
     {}
-
-  private:
-    void set_work_state(State state) { state_ = state; }
 
   public:
     Work(Work &&) = default;
@@ -86,6 +87,14 @@ class Work
         }
     }
 
+    /*!
+     * Set callback function to be called when work has finished.
+     */
+    void set_done_notification_function(std::function<void(bool)> &&fn)
+    {
+        notify_done_fn_ = std::move(fn);
+    }
+
     State get_state() const { return state_; }
 
     /*!
@@ -106,12 +115,6 @@ class Work
 
         switch(state_)
         {
-          case State::RUNNING:
-          case State::DONE:
-          case State::CANCELED:
-            BUG("Run async work in state %u", static_cast<unsigned int>(state_));
-            break;
-
           case State::RUNNABLE:
             {
                 set_work_state(State::RUNNING);
@@ -123,11 +126,16 @@ class Work
                 set_work_state(state);
             }
 
-            break;
+            return;
 
+          case State::RUNNING:
+          case State::DONE:
           case State::CANCELING:
+          case State::CANCELED:
             break;
         }
+
+        BUG("Run async work in state %u", static_cast<unsigned int>(state_));
     }
 
     /*!
@@ -191,6 +199,34 @@ class Work
      * Contract: This function must return with \p lock locked.
      */
     virtual void do_cancel(std::unique_lock<std::mutex> &lock) = 0;
+
+  private:
+    void set_work_state(State state)
+    {
+        if(state == state_)
+            return;
+
+        state_ = state;
+
+        if(notify_done_fn_ != nullptr)
+        {
+            switch(state_)
+            {
+              case State::DONE:
+                notify_done_fn_(true);
+                break;
+
+              case State::CANCELED:
+                notify_done_fn_(false);
+                break;
+
+              case State::RUNNABLE:
+              case State::RUNNING:
+              case State::CANCELING:
+                break;
+            }
+        }
+    }
 };
 
 };

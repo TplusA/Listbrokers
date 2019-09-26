@@ -22,15 +22,14 @@
 #ifndef LRU_HH
 #define LRU_HH
 
-#include <memory>
-#include <map>
-#include <vector>
-#include <ostream>
-#include <functional>
-
 #include "idtypes.hh"
 #include "timebase.hh"
 #include "messages.h"
+
+#include <memory>
+#include <map>
+#include <vector>
+#include <functional>
 
 /*!
  * \addtogroup lru_cache Least recently used object cache

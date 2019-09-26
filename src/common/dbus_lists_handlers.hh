@@ -45,10 +45,8 @@ struct IfaceData
     {}
 };
 
-void init();
 void dbus_setup(bool connect_to_session_bus, const char *dbus_object_path,
                 IfaceData *iface_data);
-void shutdown();
 
 /*!
  * \addtogroup dbus_handlers_navlists Handlers for de.tahifi.Lists.Navigation interface.
@@ -111,9 +109,12 @@ gboolean get_location_trace(tdbuslistsNavigation *object,
 gboolean realize_location(tdbuslistsNavigation *object,
                           GDBusMethodInvocation *invocation,
                           const gchar *location_url, IfaceData *data);
-gboolean abort_realize_location(tdbuslistsNavigation *object,
-                                GDBusMethodInvocation *invocation,
-                                guint cookie, IfaceData *data);
+gboolean realize_location_by_cookie(tdbuslistsNavigation *object,
+                                    GDBusMethodInvocation *invocation,
+                                    guint cookie, IfaceData *data);
+gboolean data_abort(tdbuslistsNavigation *object,
+                    GDBusMethodInvocation *invocation,
+                    GVariant *cookies, IfaceData *data);
 
 }
 

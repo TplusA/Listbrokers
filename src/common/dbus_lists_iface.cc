@@ -23,12 +23,9 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include <string.h>
-
 #include "dbus_lists_handlers.hh"
-#include "dbus_lists_iface_deep.h"
+#include "dbus_lists_iface.hh"
 #include "dbus_common.h"
-#include "messages.h"
 
 struct dbus_lists_data_t
 {
@@ -94,8 +91,11 @@ static void connect_dbus_lists_handlers(GDBusConnection *connection,
     g_signal_connect(data->navigation_iface, "handle-realize-location",
                      G_CALLBACK(DBusNavlists::realize_location),
                      data->iface_data);
-    g_signal_connect(data->navigation_iface, "handle-abort-realize-location",
-                     G_CALLBACK(DBusNavlists::abort_realize_location),
+    g_signal_connect(data->navigation_iface, "handle-realize-location-by-cookie",
+                     G_CALLBACK(DBusNavlists::realize_location_by_cookie),
+                     data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-data-abort",
+                     G_CALLBACK(DBusNavlists::data_abort),
                      data->iface_data);
 
     dbus_common_try_export_iface(connection,
@@ -136,7 +136,7 @@ void DBusNavlists::dbus_setup(bool connect_to_session_bus,
     dbus_common_register_submodule(&self);
 }
 
-tdbuslistsNavigation *dbus_lists_get_navigation_iface(void)
+tdbuslistsNavigation *DBusNavlists::get_navigation_iface()
 {
     return dbus_lists_data.navigation_iface;
 }

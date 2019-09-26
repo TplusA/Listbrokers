@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2019  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -19,4 +19,16 @@
  * MA  02110-1301, USA.
  */
 
-#include "dbus_async_work.hh"
+#ifndef DBUS_LISTS_IFACE_HH
+#define DBUS_LISTS_IFACE_HH
+
+#include "de_tahifi_lists.h"
+
+namespace DBusNavlists
+{
+
+tdbuslistsNavigation *get_navigation_iface();
+
+}
+
+#endif /* !DBUS_LISTS_IFACE_HH */

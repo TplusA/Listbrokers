@@ -61,14 +61,14 @@ libdbus_lists_handlers_la_SOURCES = \
     dbus_lists_handlers.cc dbus_lists_handlers.hh \
     listtree_glue.hh listtree_glue.cc \
     gvariantwrapper.hh gvariantwrapper.cc \
-    dbus_async_work.hh \
+    dbus_async_workqueue.hh dbus_async_work.hh \
     urlstring.hh i18nstring.hh ranked_stream_links.hh md5.hh \
     listtree.hh
 libdbus_lists_handlers_la_CFLAGS = $(AM_CFLAGS)
 libdbus_lists_handlers_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 
 libdbus_lists_iface_la_SOURCES = \
-    dbus_lists_iface.cc dbus_lists_iface_deep.h
+    dbus_lists_iface.cc dbus_lists_iface.hh
 libdbus_lists_iface_la_CFLAGS = $(CRELAXEDWARNINGS)
 libdbus_lists_iface_la_CXXFLAGS = $(AM_CXXFLAGS)
 
@@ -80,7 +80,7 @@ libdbus_artcache_iface_la_CXXFLAGS = $(AM_CXXFLAGS)
 liblisttree_la_SOURCES = \
     listtree_manager.cc listtree_manager.hh \
     cacheable.hh \
-    dbus_async_work.cc dbus_async_work.hh \
+    dbus_async_workqueue.cc dbus_async_workqueue.hh dbus_async_work.hh \
     listtree.hh idtypes.hh \
     $(DBUS_IFACES)/de_tahifi_lists_context.h
 liblisttree_la_CFLAGS = $(AM_CFLAGS)

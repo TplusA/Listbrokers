@@ -150,7 +150,8 @@ void cut_setup()
     cacheable_check = new Cacheable::CheckNoOverrides();
     cppcut_assert_not_null(cacheable_check);
 
-    list_tree = new UPnP::ListTree(*cache, *cacheable_check);
+    static DBusAsync::WorkQueue q(DBusAsync::WorkQueue::Mode::SYNCHRONOUS);
+    list_tree = new UPnP::ListTree(q, *cache, *cacheable_check);
     cppcut_assert_not_null(list_tree);
     list_tree->init();
     list_tree->start_threads(1, true);

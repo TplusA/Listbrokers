@@ -23,7 +23,7 @@
 #define MOCK_DBUS_LISTS_IFACE_HH
 
 #include "dbus_lists_handlers.hh"
-#include "dbus_lists_iface_deep.h"
+#include "dbus_lists_iface.hh"
 #include "mock_expectation.hh"
 
 class MockDBusListsIface

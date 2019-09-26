@@ -24,7 +24,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "listtree_manager.hh"
-#include "dbus_lists_iface_deep.h"
+#include "dbus_lists_iface.hh"
 
 void ListTreeManager::announce_root_list(ID::List id)
 {
@@ -32,7 +32,7 @@ void ListTreeManager::announce_root_list(ID::List id)
 
     cache_check_.list_invalidate(ID::List(), id);
 
-    tdbuslistsNavigation *iface = dbus_lists_get_navigation_iface();
+    auto *iface = DBusNavlists::get_navigation_iface();
     tdbus_lists_navigation_emit_list_invalidate(iface, 0, id.get_raw_id());
 }
 
@@ -46,7 +46,7 @@ void ListTreeManager::reinsert_list(ID::List &id)
 
     cache_check_.list_invalidate(old_id, id);
 
-    tdbuslistsNavigation *iface = dbus_lists_get_navigation_iface();
+    auto *iface = DBusNavlists::get_navigation_iface();
     tdbus_lists_navigation_emit_list_invalidate(iface, old_id.get_raw_id(),
                                                 id.get_raw_id());
 }
@@ -101,7 +101,7 @@ void ListTreeManager::list_discarded_from_cache(ID::List id)
 {
     cache_check_.list_invalidate(id, ID::List());
 
-    tdbuslistsNavigation *iface = dbus_lists_get_navigation_iface();
+    auto *iface = DBusNavlists::get_navigation_iface();
     tdbus_lists_navigation_emit_list_invalidate(iface, id.get_raw_id(), 0);
 }
 
@@ -170,7 +170,7 @@ ListTreeManager::purge_subtree(ID::List old_id, ID::List new_id,
 
         cache_check_.list_invalidate(old_id, new_id);
 
-        tdbus_lists_navigation_emit_list_invalidate(dbus_lists_get_navigation_iface(),
+        tdbus_lists_navigation_emit_list_invalidate(DBusNavlists::get_navigation_iface(),
                                                     old_id.get_raw_id(),
                                                     new_id.get_raw_id());
 

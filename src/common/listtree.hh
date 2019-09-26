@@ -22,20 +22,17 @@
 #ifndef LISTTREE_HH
 #define LISTTREE_HH
 
-#include <string>
-#include <vector>
-#include <functional>
-#include <chrono>
-#include <atomic>
-
 #include "idtypes.hh"
-#include "dbus_async_work.hh"
+#include "dbus_async_workqueue.hh"
 #include "ranked_stream_links.hh"
 #include "strbo_url.hh"
 #include "i18nstring.hh"
 #include "md5.hh"
 #include "de_tahifi_lists_errors.hh"
 #include "de_tahifi_lists_item_kinds.hh"
+
+#include <vector>
+#include <atomic>
 
 class ListItemKey
 {
@@ -99,6 +96,8 @@ class ListTreeIface
         }
     };
 
+    DBusAsync::WorkQueue &q_navlists_realize_location_;
+
   private:
     static const std::string empty_string;
 
@@ -106,7 +105,8 @@ class ListTreeIface
     std::atomic_uint cancel_blocking_operation_counter;
     const std::function<bool(void)> may_continue_fn_;
 
-    explicit ListTreeIface():
+    explicit ListTreeIface(DBusAsync::WorkQueue &navlists_realize_location):
+        q_navlists_realize_location_(navlists_realize_location),
         cancel_blocking_operation_counter(0),
         may_continue_fn_(std::bind(&ListTreeIface::is_blocking_operation_allowed, this))
     {}

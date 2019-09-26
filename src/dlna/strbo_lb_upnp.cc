@@ -111,7 +111,11 @@ static int create_list_tree_and_cache(UPnPListTreeData &lt, GMainLoop *loop)
 
     UPnP::init_standard_dbus_fillers(*lt.cache_);
 
-    lt.list_tree_ = std::make_unique<UPnP::ListTree>(*lt.cache_, *lt.cache_check_);
+    static DBusAsync::WorkQueue navlists_realize_location(DBusAsync::WorkQueue::Mode::ASYNC);
+
+    lt.list_tree_ =
+        std::make_unique<UPnP::ListTree>(navlists_realize_location,
+                                         *lt.cache_, *lt.cache_check_);
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("UPnP list tree");
 

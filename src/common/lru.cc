@@ -23,12 +23,11 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include <chrono>
+#include "lru.hh"
+
 #include <algorithm>
 #include <unordered_map>
-
-#include "lru.hh"
-#include "messages.h"
+#include <ostream>
 
 ID::List LRU::CacheIdGenerator::next(LRU::CacheMode cache_mode,
                                      ID::List::context_t ctx)

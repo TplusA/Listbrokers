@@ -109,7 +109,11 @@ static int create_list_tree_and_cache(USBListTreeData &lt, GMainLoop *loop)
     if(lt.cache_check_ == nullptr)
         return msg_out_of_memory("Cacheable check");
 
-    lt.list_tree_ = std::make_unique<USB::ListTree>(*lt.cache_, *lt.cache_check_);
+    static DBusAsync::WorkQueue navlists_realize_location(DBusAsync::WorkQueue::Mode::ASYNC);
+
+    lt.list_tree_ =
+        std::make_unique<USB::ListTree>(navlists_realize_location,
+                                        *lt.cache_, *lt.cache_check_);
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("USB list tree");
 

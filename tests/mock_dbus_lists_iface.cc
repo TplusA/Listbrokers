@@ -145,7 +145,7 @@ void DBusNavlists::dbus_setup(bool connect_to_session_bus,
     cppcut_assert_equal(expect.arg_navlists_iface_data_, iface_data);
 }
 
-tdbuslistsNavigation *dbus_lists_get_navigation_iface(void)
+tdbuslistsNavigation *DBusNavlists::get_navigation_iface()
 {
     const auto &expect(mock_dbus_lists_iface_singleton->expectations_->get_next_expectation(__func__));
 
