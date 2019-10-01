@@ -92,6 +92,11 @@ class WorkQueue
     void shutdown();
 
     /*!
+     * Stop processing work, cancel all work items, clear queue.
+     */
+    void clear();
+
+    /*!
      * Add work to be processed.
      *
      * If the work queue has been initialized to employ a worker thread

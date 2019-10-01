@@ -34,6 +34,12 @@ void DBusAsync::WorkQueue::shutdown()
         thread_.join();
 }
 
+void DBusAsync::WorkQueue::clear()
+{
+    std::lock_guard<std::mutex> lock(lock_);
+    cancel_all_work();
+}
+
 bool DBusAsync::WorkQueue::add_work(std::shared_ptr<Work> &&work,
                                     std::function<void(bool, bool)> &&work_accepted)
 {
@@ -47,10 +53,12 @@ bool DBusAsync::WorkQueue::add_work(std::shared_ptr<Work> &&work,
       case Mode::ASYNC:
         if(queue_work(std::move(work)))
         {
-            work_accepted(true, false);
+            if(work_accepted != nullptr)
+                work_accepted(true, false);
+
             work_finished_.notify_one();
         }
-        else
+        else if(work_accepted != nullptr)
             work_accepted(true, false);
 
         return true;
@@ -60,9 +68,14 @@ bool DBusAsync::WorkQueue::add_work(std::shared_ptr<Work> &&work,
     }
 
     queue_work(work);
-    work_accepted(false, false);
+
+    if(work_accepted != nullptr)
+        work_accepted(false, false);
+
     process_work_item(lock, std::move(work));
-    work_accepted(false, true);
+
+    if(work_accepted != nullptr)
+        work_accepted(false, true);
 
     return false;
 }
