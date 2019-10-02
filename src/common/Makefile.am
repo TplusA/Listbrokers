@@ -61,6 +61,7 @@ libdbus_lists_handlers_la_SOURCES = \
     dbus_lists_handlers.cc dbus_lists_handlers.hh \
     listtree_glue.hh listtree_glue.cc \
     gvariantwrapper.hh gvariantwrapper.cc \
+    gerrorwrapper.hh \
     dbus_async_workqueue.hh dbus_async_work.hh \
     urlstring.hh i18nstring.hh ranked_stream_links.hh md5.hh \
     listtree.hh
@@ -102,6 +103,7 @@ libartcache_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
 libdebug_dbus_la_SOURCES = \
     dbus_debug_levels.cc dbus_debug_levels.hh \
+    gerrorwrapper.hh \
     messages_dbus.c messages_dbus.h
 nodist_libdebug_dbus_la_SOURCES = de_tahifi_debug.c de_tahifi_debug.h
 libdebug_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
