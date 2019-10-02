@@ -41,8 +41,8 @@ class ListItemKey
     bool is_valid_;
 
   public:
-    ListItemKey(const ListItemKey &) = delete;
-    ListItemKey &operator=(const ListItemKey &) = delete;
+    ListItemKey(ListItemKey &&) = default;
+    ListItemKey &operator=(ListItemKey &&) = default;
 
     explicit ListItemKey(): is_valid_(false) {}
 
@@ -96,6 +96,16 @@ class ListTreeIface
         }
     };
 
+    /* GetRange(), GetRangeWithMetaData() */
+    DBusAsync::WorkQueue &q_navlists_get_range_;
+
+    /* GetListId(), GetParameterizedListId() */
+    DBusAsync::WorkQueue &q_navlists_get_list_id_;
+
+    /* GetURIs(), GetRankedStreamLinks() */
+    DBusAsync::WorkQueue &q_navlists_get_uris_;
+
+    /* GetLocationTrace(), RealizeLocation() */
     DBusAsync::WorkQueue &q_navlists_realize_location_;
 
   private:
@@ -105,7 +115,13 @@ class ListTreeIface
     std::atomic_uint cancel_blocking_operation_counter;
     const std::function<bool(void)> may_continue_fn_;
 
-    explicit ListTreeIface(DBusAsync::WorkQueue &navlists_realize_location):
+    explicit ListTreeIface(DBusAsync::WorkQueue &navlists_get_range,
+                           DBusAsync::WorkQueue &navlists_get_list_id,
+                           DBusAsync::WorkQueue &navlists_get_uris,
+                           DBusAsync::WorkQueue &navlists_realize_location):
+        q_navlists_get_range_(navlists_get_range),
+        q_navlists_get_list_id_(navlists_get_list_id),
+        q_navlists_get_uris_(navlists_get_uris),
         q_navlists_realize_location_(navlists_realize_location),
         cancel_blocking_operation_counter(0),
         may_continue_fn_(std::bind(&ListTreeIface::is_blocking_operation_allowed, this))

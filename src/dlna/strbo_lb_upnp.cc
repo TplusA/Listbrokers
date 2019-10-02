@@ -23,15 +23,14 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include <cstring>
-#include <iostream>
-
 #include "main.hh"
-
 #include "dbus_upnp_iface.hh"
 #include "periodic_rescan.hh"
 #include "messages_glib.h"
 #include "versioninfo.h"
+
+#include <cstring>
+#include <iostream>
 
 class UPnPListTreeData: public ListTreeData
 {
@@ -111,10 +110,14 @@ static int create_list_tree_and_cache(UPnPListTreeData &lt, GMainLoop *loop)
 
     UPnP::init_standard_dbus_fillers(*lt.cache_);
 
+    static DBusAsync::WorkQueue navlists_get_range(DBusAsync::WorkQueue::Mode::ASYNC);
+    static DBusAsync::WorkQueue navlists_get_list_id(DBusAsync::WorkQueue::Mode::ASYNC);
+    static DBusAsync::WorkQueue navlists_get_uris(DBusAsync::WorkQueue::Mode::ASYNC);
     static DBusAsync::WorkQueue navlists_realize_location(DBusAsync::WorkQueue::Mode::ASYNC);
 
     lt.list_tree_ =
-        std::make_unique<UPnP::ListTree>(navlists_realize_location,
+        std::make_unique<UPnP::ListTree>(navlists_get_range, navlists_get_list_id,
+                                         navlists_get_uris, navlists_realize_location,
                                          *lt.cache_, *lt.cache_check_);
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("UPnP list tree");

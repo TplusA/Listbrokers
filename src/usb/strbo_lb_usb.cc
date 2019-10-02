@@ -23,15 +23,14 @@
 #include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#include <cstring>
-#include <iostream>
-
 #include "main.hh"
-
 #include "dbus_usb_iface.hh"
 #include "usb_helpers.hh"
 #include "messages_glib.h"
 #include "versioninfo.h"
+
+#include <cstring>
+#include <iostream>
 
 class USBListTreeData: public ListTreeData
 {
@@ -109,10 +108,14 @@ static int create_list_tree_and_cache(USBListTreeData &lt, GMainLoop *loop)
     if(lt.cache_check_ == nullptr)
         return msg_out_of_memory("Cacheable check");
 
+    static DBusAsync::WorkQueue navlists_get_range(DBusAsync::WorkQueue::Mode::ASYNC);
+    static DBusAsync::WorkQueue navlists_get_list_id(DBusAsync::WorkQueue::Mode::ASYNC);
+    static DBusAsync::WorkQueue navlists_get_uris(DBusAsync::WorkQueue::Mode::ASYNC);
     static DBusAsync::WorkQueue navlists_realize_location(DBusAsync::WorkQueue::Mode::ASYNC);
 
     lt.list_tree_ =
-        std::make_unique<USB::ListTree>(navlists_realize_location,
+        std::make_unique<USB::ListTree>(navlists_get_range, navlists_get_list_id,
+                                        navlists_get_uris, navlists_realize_location,
                                         *lt.cache_, *lt.cache_check_);
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("USB list tree");

@@ -99,7 +99,27 @@ class CookieJar
   private:
     std::mutex lock_;
     std::atomic<uint32_t> next_free_cookie_;
-    std::unordered_map<uint32_t, std::shared_ptr<NavListsWorkBase>> work_by_cookie_;
+
+    class StoredWork
+    {
+      public:
+        std::shared_ptr<NavListsWorkBase> work_;
+        bool is_being_waited_for_;
+        bool timed_out_;
+
+        StoredWork(const StoredWork &) = delete;
+        StoredWork(StoredWork &&) = default;
+        StoredWork &operator=(const StoredWork &) = delete;
+        StoredWork &operator=(StoredWork &&) = default;
+
+        explicit StoredWork(std::shared_ptr<NavListsWorkBase> &&work):
+            work_(std::move(work)),
+            is_being_waited_for_(false),
+            timed_out_(false)
+        {}
+    };
+
+    std::unordered_map<uint32_t, StoredWork> work_by_cookie_;
 
   public:
     CookieJar(const CookieJar &) = delete;
@@ -111,6 +131,13 @@ class CookieJar
         next_free_cookie_(1)
     {}
 
+    enum class DataAvailableNotificationMode
+    {
+        NEVER,          /* never notify (for pure synchronous interfaces) */
+        AFTER_TIMEOUT,  /* for interfaces with fast path option */
+        ALWAYS,         /* always notify (for pure asynchronous interfaces) */
+    };
+
     /*!
      * Promise to do work in exchange for a cookie.
      *
@@ -121,19 +148,34 @@ class CookieJar
      * \param work
      *     A work item to be processed.
      *
+     * \param mode
+     *     How to notify D-Bus clients about finished work. This parameter is
+     *     passed on to #CookieJar::work_done_notification(). In case of
+     *     #CookieJar::DataAvailableNotificationMode::ALWAYS, the
+     *     \c de.tahifi.Lists.Navigation.DataAvailable D-Bus signal is always
+     *     emitted when the work has been processed. In case of
+     *     #CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT, the signal
+     *     is emitted when the work has been finished, but only if the work has
+     *     been waited for before and a timeout occurred (this mode is required
+     *     for fast path implementations). In case of
+     *     #CookieJar::DataAvailableNotificationMode::NEVER, the D-Bus signal
+     *     is never emitted automatically (this mode is required for
+     *     implementations without fast path provisions).
+     *
      * \returns
      *     A sufficiently unique value which identifies \p work. It can be used
      *     to retrieve the results later, or cancel the work.
      */
-    uint32_t pick_cookie_for_work(std::shared_ptr<NavListsWorkBase> &&work)
+    uint32_t pick_cookie_for_work(std::shared_ptr<NavListsWorkBase> &&work,
+                                  DataAvailableNotificationMode mode)
     {
         std::lock_guard<std::mutex> lock(lock_);
 
         const auto cookie = bake_cookie();
         work->set_done_notification_function(
-            [this, cookie] (bool has_completed)
-            { work_done_notification(cookie, has_completed); });
-        work_by_cookie_[cookie] = std::move(work);
+            [this, cookie, mode] (bool has_completed)
+            { work_done_notification(cookie, mode, has_completed); });
+        work_by_cookie_.emplace(cookie, StoredWork(std::move(work)));
 
         return cookie;
     }
@@ -154,7 +196,7 @@ class CookieJar
 
         auto it(work_by_cookie_.find(cookie));
         if(it != work_by_cookie_.end())
-            it->second->cancel();
+            it->second.work_->cancel();
     }
 
     enum class EatMode
@@ -200,13 +242,19 @@ class CookieJar
      *     the work will remain unprocessed and this function will throw a
      *     #TimeoutError without actually running into a timeout.
      *
+     * \param on_timeout
+     *     In case the work couldn't be finished within the short time granted
+     *     for fast path work, this function will be called with its parameter
+     *     to the \p cookie. May be \c nullptr (do this in the \c ByCookie
+     *     result fetcher methods).
+     *
      * \returns
      *     The return value of #NavListsWork<WorkType>::wait_for().
      */
     template <typename WorkType>
     typename WorkType::ResultType
-    try_eat(uint32_t cookie,
-            EatMode eat_mode = EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK)
+    try_eat(uint32_t cookie, EatMode eat_mode,
+            const std::function<void(uint32_t)> &on_timeout)
     {
         if(cookie == 0)
             throw BadCookieError("bad value");
@@ -217,25 +265,68 @@ class CookieJar
         if(it == work_by_cookie_.end())
             throw BadCookieError("unknown");
 
-        log_assert(it->second != nullptr);
+        log_assert(it->second.work_ != nullptr);
 
-        auto work = std::dynamic_pointer_cast<WorkType>(it->second);
+        auto work = std::dynamic_pointer_cast<WorkType>(it->second.work_);
         if(work == nullptr)
             throw BadCookieError("wrong type");
 
+        /* avoid sending data available notifications in case the notification
+         * mode is #CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT */
+        it->second.is_being_waited_for_ = true;
+
         lock.unlock();
 
-        /* this may throw a #TimeoutError */
-        auto result(work->wait_for(std::chrono::milliseconds(150),
-                                   eat_mode == EatMode::WILL_WORK_FOR_COOKIES
-                                   ? WaitForMode::ALLOW_SYNC_PROCESSING
-                                   : WaitForMode::NO_SYNC));
+        try
+        {
+            /* this may throw a #TimeoutError */
+            auto result(work->wait_for(std::chrono::milliseconds(150),
+                                       eat_mode == EatMode::WILL_WORK_FOR_COOKIES
+                                       ? WaitForMode::ALLOW_SYNC_PROCESSING
+                                       : WaitForMode::NO_SYNC));
 
-        /* we have our result, so we "eat" our cookie now and remove its
-         * associated work item */
-        lock.lock();
-        work_by_cookie_.erase(it);
-        return result;
+            /* we have our result, so we "eat" our cookie now and remove its
+            * associated work item */
+            lock.lock();
+            work_by_cookie_.erase(cookie);
+            return result;
+        }
+        catch(const TimeoutError &)
+        {
+            /* at this point, before the lock can be acquired, the work may
+             * complete in the background */
+            lock.lock();
+
+            /* we cannot reuse \c it here because the iterator may have been
+             * invalidated in the meantime */
+            auto w(work_by_cookie_.find(cookie));
+            if(w != work_by_cookie_.end())
+            {
+                w->second.timed_out_ = true;
+                w->second.is_being_waited_for_ = false;
+            }
+
+            if(on_timeout != nullptr)
+                on_timeout(cookie);
+
+            throw;
+        }
+        catch(...)
+        {
+            auto w(work_by_cookie_.find(cookie));
+            if(w != work_by_cookie_.end())
+                w->second.is_being_waited_for_ = false;
+
+            throw;
+        }
+    }
+
+    static void notify_data_available(uint32_t cookie)
+    {
+        tdbus_lists_navigation_emit_data_available(
+            DBusNavlists::get_navigation_iface(),
+            g_variant_new_fixed_array(G_VARIANT_TYPE_UINT32,
+                                      &cookie, 1, sizeof(cookie)));
     }
 
   private:
@@ -248,7 +339,8 @@ class CookieJar
      * item. In general, no assumptions about context of execution must be made
      * here.
      */
-    void work_done_notification(uint32_t cookie, bool has_completed)
+    void work_done_notification(uint32_t cookie, DataAvailableNotificationMode mode,
+                                bool has_completed)
     {
         std::unique_lock<std::mutex> lock(lock_);
 
@@ -261,23 +353,44 @@ class CookieJar
             return;
         }
 
-        const bool success = w->second->success();
+        const bool success = w->second.work_->success();
         const auto error = has_completed
-            ? w->second->get_error_code()
+            ? w->second.work_->get_error_code()
             : ListError::Code::INTERRUPTED;
+        const bool timed_out_at_least_once = w->second.timed_out_;
 
         if(!has_completed)
             work_by_cookie_.erase(w);
 
-        lock.unlock();
-
         if(success)
-            tdbus_lists_navigation_emit_data_available(
-                DBusNavlists::get_navigation_iface(),
-                g_variant_new_fixed_array(G_VARIANT_TYPE_UINT32,
-                                          &cookie, 1, sizeof(cookie)));
+        {
+            switch(mode)
+            {
+              case DataAvailableNotificationMode::NEVER:
+                break;
+
+              case DataAvailableNotificationMode::AFTER_TIMEOUT:
+                if(!timed_out_at_least_once)
+                    break;
+
+                if(has_completed && w->second.is_being_waited_for_)
+                {
+                    /* avoid a race condition with CookieJar::try_eat() */
+                    break;
+                }
+
+                /* fall-through */
+
+              case DataAvailableNotificationMode::ALWAYS:
+                lock.unlock();
+                notify_data_available(cookie);
+                break;
+            }
+        }
         else
         {
+            lock.unlock();
+
             GVariantBuilder b;
             g_variant_builder_init(&b, reinterpret_cast<const GVariantType *>("a(uy)"));
             g_variant_builder_add(&b, "(uy)", cookie, error);
@@ -452,11 +565,10 @@ gboolean DBusNavlists::get_list_contexts(tdbuslistsNavigation *object,
 
 class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrapper>>
 {
-  public:
+  private:
     static constexpr const char *const DBUS_RETURN_TYPE_STRING = "a(sy)";
     static constexpr const char *const DBUS_ELEMENT_TYPE_STRING = "(sy)";
 
-  private:
     const ID::List list_id_;
     const ID::Item first_item_id_;
     const size_t count_;
@@ -473,6 +585,24 @@ class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrap
         count_(count)
     {
         log_assert(list_id_.is_valid());
+    }
+
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_range(
+            object, invocation, cookie, error, 0,
+            g_variant_new(DBUS_RETURN_TYPE_STRING, nullptr));
+    }
+
+    static void slow_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_range_by_cookie(
+            object, invocation, error, 0,
+            g_variant_new(DBUS_RETURN_TYPE_STRING, nullptr));
     }
 
   protected:
@@ -500,7 +630,7 @@ class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrap
         if(error.failed())
         {
             g_variant_unref(items_in_range);
-            items_in_range = g_variant_new(DBUS_RETURN_TYPE_STRING, NULL);
+            items_in_range = g_variant_new(DBUS_RETURN_TYPE_STRING, nullptr);
         }
 
         promise_.set_value(
@@ -519,28 +649,171 @@ gboolean DBusNavlists::get_range(tdbuslistsNavigation *object,
 {
     enter_handler(invocation);
 
-    if(list_id == 0)
-    {
-        GVariant *const empty_range =
-            g_variant_new(GetRange::DBUS_RETURN_TYPE_STRING, NULL);
+    const ID::List id(list_id);
 
-        tdbus_lists_navigation_complete_get_range(object, invocation,
-                                                  ListError::INVALID_ID,
-                                                  0, empty_range);
+    if(!data->listtree_.use_list(id, false))
+    {
+        GetRange::fast_path_failure(object, invocation, 0, ListError::INVALID_ID);
         return TRUE;
     }
 
-    GetRange w(data->listtree_, ID::List(list_id), ID::Item(first_item_id), count);
-    auto result(w.wait_for(std::chrono::milliseconds(0),
-                           WaitForMode::ALLOW_SYNC_PROCESSING));
+    auto work =
+        std::make_shared<GetRange>(data->listtree_, id,
+                                   ID::Item(first_item_id), count);
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT);
 
-    tdbus_lists_navigation_complete_get_range(
-            object, invocation, std::get<0>(result).get_raw_code(),
+    const auto eat_mode =
+        data->listtree_.q_navlists_get_range_.add_work(std::move(work), nullptr)
+        ? CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK
+        : CookieJar::EatMode::WILL_WORK_FOR_COOKIES;
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetRange>(cookie, eat_mode,
+            [object, invocation] (uint32_t c)
+            {
+                GetRange::fast_path_failure(object, invocation, c, ListError::BUSY);
+            }));
+
+        /* fast path answer */
+        tdbus_lists_navigation_complete_get_range(
+            object, invocation, 0, std::get<0>(result).get_raw_code(),
             std::get<1>(result).get_raw_id(),
             GVariantWrapper::move(std::get<2>(result)));
+    }
+    catch(const TimeoutError &)
+    {
+        /* handled above */
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Unexpected failure (%d)", __LINE__);
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Internal error (%s)", e.what());
+    }
 
     return TRUE;
 }
+
+gboolean DBusNavlists::get_range_by_cookie(tdbuslistsNavigation *object,
+                                           GDBusMethodInvocation *invocation,
+                                           guint cookie, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetRange>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
+
+        tdbus_lists_navigation_complete_get_range_by_cookie(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            GVariantWrapper::move(std::get<2>(result)));
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        GetRange::slow_path_failure(object, invocation, ListError::BUSY);
+    }
+
+    return TRUE;
+}
+
+class GetRangeWithMetaData: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrapper>>
+{
+  private:
+    static constexpr const char *const DBUS_RETURN_TYPE_STRING = "a(sssyy)";
+    static constexpr const char *const DBUS_ELEMENT_TYPE_STRING = "(sssyy)";
+
+    const ID::List list_id_;
+    const ID::Item first_item_id_;
+    const size_t count_;
+
+  public:
+    GetRangeWithMetaData(GetRangeWithMetaData &&) = default;
+    GetRangeWithMetaData &operator=(GetRangeWithMetaData &&) = default;
+
+    explicit GetRangeWithMetaData(ListTreeIface &listtree, ID::List list_id,
+                      ID::Item first_item_id, size_t count):
+        NavListsWork(listtree),
+        list_id_(list_id),
+        first_item_id_(first_item_id),
+        count_(count)
+    {
+        log_assert(list_id_.is_valid());
+    }
+
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_range_with_meta_data(
+            object, invocation, cookie, error, 0,
+            g_variant_new(DBUS_RETURN_TYPE_STRING, nullptr));
+    }
+
+    static void slow_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_range_with_meta_data_by_cookie(
+            object, invocation, error, 0,
+            g_variant_new(DBUS_RETURN_TYPE_STRING, nullptr));
+    }
+
+  protected:
+    bool do_run() final override
+    {
+        listtree_.use_list(list_id_, false);
+
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE(DBUS_RETURN_TYPE_STRING));
+
+        const ListError error =
+            listtree_.for_each(list_id_, first_item_id_, count_,
+                [&builder] (const ListTreeIface::ForEachItemDataDetailed &item_data)
+                {
+                    msg_info("for_each(): \"%s\"/\"%s\"/\"%s\", primary %u, %s dir",
+                             item_data.artist_.c_str(),
+                             item_data.album_.c_str(),
+                             item_data.title_.c_str(),
+                             item_data.primary_string_index_,
+                             item_data.kind_.is_directory() ? "is" : "no");
+                    g_variant_builder_add(&builder, DBUS_ELEMENT_TYPE_STRING,
+                                          item_data.artist_.c_str(),
+                                          item_data.album_.c_str(),
+                                          item_data.title_.c_str(),
+                                          item_data.primary_string_index_,
+                                          item_data.kind_.get_raw_code());
+                    return true;
+                });
+
+        GVariant *items_in_range = g_variant_builder_end(&builder);
+
+        if(error.failed())
+        {
+            g_variant_unref(items_in_range);
+            items_in_range = g_variant_new(DBUS_ELEMENT_TYPE_STRING, nullptr);
+        }
+
+        promise_.set_value(
+            std::make_tuple(error, error.failed() ? ID::Item() : first_item_id_,
+                            GVariantWrapper(items_in_range)));
+        put_error(error);
+
+        return error != ListError::INTERRUPTED;
+    }
+};
 
 gboolean DBusNavlists::get_range_with_meta_data(tdbuslistsNavigation *object,
                                                 GDBusMethodInvocation *invocation,
@@ -550,50 +823,84 @@ gboolean DBusNavlists::get_range_with_meta_data(tdbuslistsNavigation *object,
 {
     enter_handler(invocation);
 
-    ID::List id(list_id);
-    ListError error;
+    const ID::List id(list_id);
 
-    data->listtree_.use_list(id, false);
-
-    GVariantBuilder builder;
-    g_variant_builder_init(&builder, G_VARIANT_TYPE("a(sssyy)"));
-
-    if(!id.is_valid())
-        error = ListError::INVALID_ID;
-    else
-        error =
-            data->listtree_.for_each(id, ID::Item(first_item_id), count,
-                [&builder] (const ListTreeIface::ForEachItemDataDetailed &item_data)
-                {
-                    msg_info("for_each(): \"%s\"/\"%s\"/\"%s\", primary %u, %s dir",
-                             item_data.artist_.c_str(),
-                             item_data.album_.c_str(),
-                             item_data.title_.c_str(),
-                             item_data.primary_string_index_,
-                             item_data.kind_.is_directory() ? "is" : "no");
-                    g_variant_builder_add(&builder, "(sssyy)",
-                                          item_data.artist_.c_str(),
-                                          item_data.album_.c_str(),
-                                          item_data.title_.c_str(),
-                                          item_data.primary_string_index_,
-                                          item_data.kind_.get_raw_code());
-                    return true;
-                });
-
-    GVariant *items_in_range = g_variant_builder_end(&builder);
-
-    if(error.failed())
+    if(!data->listtree_.use_list(id, false))
     {
-        first_item_id = 0;
-        g_variant_unref(items_in_range);
-        items_in_range = g_variant_new("a(sssyy)", NULL);
+        GetRangeWithMetaData::fast_path_failure(object, invocation,
+                                                0, ListError::INVALID_ID);
+        return TRUE;
     }
 
-    tdbus_lists_navigation_complete_get_range_with_meta_data(object,
-                                                             invocation,
-                                                             error.get_raw_code(),
-                                                             first_item_id,
-                                                             items_in_range);
+    auto work =
+        std::make_shared<GetRangeWithMetaData>(data->listtree_, id,
+                                               ID::Item(first_item_id), count);
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT);
+
+    const auto eat_mode =
+        data->listtree_.q_navlists_get_range_.add_work(std::move(work), nullptr)
+        ? CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK
+        : CookieJar::EatMode::WILL_WORK_FOR_COOKIES;
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetRangeWithMetaData>(cookie, eat_mode,
+            [object, invocation] (uint32_t c)
+            {
+                GetRangeWithMetaData::fast_path_failure(object, invocation,
+                                                        c, ListError::BUSY);
+            }));
+
+        /* fast path answer */
+        tdbus_lists_navigation_complete_get_range_with_meta_data(
+            object, invocation, 0, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            GVariantWrapper::move(std::get<2>(result)));
+    }
+    catch(const TimeoutError &)
+    {
+        /* handled above */
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Unexpected failure (%d)", __LINE__);
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Internal error (%s)", e.what());
+    }
+
+    return TRUE;
+}
+
+gboolean DBusNavlists::get_range_with_meta_data_by_cookie(
+            tdbuslistsNavigation *object, GDBusMethodInvocation *invocation,
+            guint cookie, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetRangeWithMetaData>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
+
+        tdbus_lists_navigation_complete_get_range_with_meta_data_by_cookie(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            GVariantWrapper::move(std::get<2>(result)));
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        GetRangeWithMetaData::slow_path_failure(object, invocation, ListError::BUSY);
+    }
 
     return TRUE;
 }
@@ -650,13 +957,27 @@ class GetListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::Strin
         item_id_(item_id)
     {}
 
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_list_id(object, invocation, cookie,
+                                                    error, 0, "", FALSE);
+    }
+
+    static void slow_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_list_id_by_cookie(
+            object, invocation, error, 0, "", FALSE);
+    }
+
   protected:
     bool do_run() final override
     {
-        if(list_id_.is_valid())
+        if(listtree_.use_list(list_id_, false))
         {
-            listtree_.use_list(list_id_, false);
-
             ListError error;
             const auto child_id = listtree_.enter_child(list_id_, item_id_, error);
 
@@ -703,17 +1024,145 @@ gboolean DBusNavlists::get_list_id(tdbuslistsNavigation *object,
         return TRUE;
     }
 
-    GetListID w(data->listtree_, ID::List(list_id), ID::Item(item_id));
-    auto result(w.wait_for(std::chrono::milliseconds(0),
-                           WaitForMode::ALLOW_SYNC_PROCESSING));
-    tdbus_lists_navigation_complete_get_list_id(
+    auto work =
+        std::make_shared<GetListID>(data->listtree_,
+                                    list_id == 0 ? ID::List() : ID::List(list_id),
+                                    list_id == 0 ? ID::Item() : ID::Item(item_id));
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT);
+
+    const auto eat_mode =
+        data->listtree_.q_navlists_get_list_id_.add_work(std::move(work), nullptr)
+        ? CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK
+        : CookieJar::EatMode::WILL_WORK_FOR_COOKIES;
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetListID>(cookie, eat_mode,
+            [object, invocation] (uint32_t c)
+            {
+                GetListID::fast_path_failure(object, invocation, c, ListError::BUSY);
+            }));
+
+        /* fast path answer */
+        tdbus_lists_navigation_complete_get_list_id(
+            object, invocation, 0, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            std::get<2>(result).get_text().c_str(),
+            std::get<2>(result).is_translatable());
+    }
+    catch(const TimeoutError &)
+    {
+        /* handled above */
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Unexpected failure (%d)", __LINE__);
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Internal error (%s)", e.what());
+    }
+
+    return TRUE;
+}
+
+gboolean DBusNavlists::get_list_id_by_cookie(tdbuslistsNavigation *object,
+                                             GDBusMethodInvocation *invocation,
+                                             guint cookie, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetListID>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
+
+        tdbus_lists_navigation_complete_get_list_id_by_cookie(
             object, invocation, std::get<0>(result).get_raw_code(),
             std::get<1>(result).get_raw_id(),
             std::get<2>(result).get_text().c_str(),
             std::get<2>(result).is_translatable());
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        GetListID::slow_path_failure(object, invocation, ListError::BUSY);
+    }
 
     return TRUE;
 }
+
+class GetParamListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::String>>
+{
+  private:
+    const ID::List list_id_;
+    const ID::Item item_id_;
+    const std::string parameter_;
+
+  public:
+    GetParamListID(GetParamListID &&) = default;
+    GetParamListID &operator=(GetParamListID &&) = default;
+
+    explicit GetParamListID(ListTreeIface &listtree,
+                            ID::List list_id, ID::Item item_id,
+                            std::string &&parameter):
+        NavListsWork(listtree),
+        list_id_(list_id),
+        item_id_(item_id),
+        parameter_(std::move(parameter))
+    {}
+
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_parameterized_list_id(
+            object, invocation, cookie, error, 0, "", FALSE);
+    }
+
+    static void slow_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_parameterized_list_id_by_cookie(
+            object, invocation, error, 0, "", FALSE);
+    }
+
+  protected:
+    bool do_run() final override
+    {
+        if(!listtree_.use_list(list_id_, false))
+        {
+            put_error(ListError(ListError::INVALID_ID));
+            promise_.set_value(std::make_tuple(
+                ListError(ListError::INVALID_ID), ID::List(), I18n::String(false)));
+            return true;
+        }
+
+        ListError error;
+        const auto child_id =
+            listtree_.enter_child_with_parameters(list_id_, item_id_,
+                                                  parameter_.c_str(), error);
+
+        if(child_id.is_valid())
+            promise_.set_value(std::make_tuple(
+                error, child_id,
+                listtree_.get_child_list_title(list_id_, item_id_)));
+        else
+            promise_.set_value(std::make_tuple(error, child_id, I18n::String(false)));
+
+        put_error(error);
+
+        return error != ListError::INTERRUPTED;
+    }
+};
 
 gboolean DBusNavlists::get_parameterized_list_id(tdbuslistsNavigation *object,
                                                  GDBusMethodInvocation *invocation,
@@ -724,34 +1173,83 @@ gboolean DBusNavlists::get_parameterized_list_id(tdbuslistsNavigation *object,
     enter_handler(invocation);
 
     if(list_id == 0)
+    {
         g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
                                               G_DBUS_ERROR_INVALID_ARGS,
                                               "Root lists are not parameterized");
-    else
+        return TRUE;
+    }
+
+    auto work =
+        std::make_shared<GetParamListID>(data->listtree_, ID::List(list_id),
+                                         ID::Item(item_id), parameter);
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT);
+
+    const auto eat_mode =
+        data->listtree_.q_navlists_get_list_id_.add_work(std::move(work), nullptr)
+        ? CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK
+        : CookieJar::EatMode::WILL_WORK_FOR_COOKIES;
+
+    try
     {
-        data->listtree_.use_list(ID::List(list_id), false);
+        auto result(cookie_jar.try_eat<GetParamListID>(cookie, eat_mode,
+            [object, invocation] (uint32_t c)
+            {
+                GetParamListID::fast_path_failure(object, invocation,
+                                                  c, ListError::BUSY);
+            }));
 
-        ListError error;
-        const auto child_id =
-            data->listtree_.enter_child_with_parameters(ID::List(list_id),
-                                                        ID::Item(item_id),
-                                                        parameter, error);
+        /* fast path answer */
+        tdbus_lists_navigation_complete_get_parameterized_list_id(
+            object, invocation, 0, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            std::get<2>(result).get_text().c_str(),
+            std::get<2>(result).is_translatable());
+    }
+    catch(const TimeoutError &)
+    {
+        /* handled above */
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Unexpected failure (%d)", __LINE__);
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Internal error (%s)", e.what());
+    }
 
-        if(child_id.is_valid())
-        {
-            const auto title(data->listtree_.get_child_list_title(ID::List(list_id), ID::Item(item_id)));
+    return TRUE;
+}
 
-            tdbus_lists_navigation_complete_get_parameterized_list_id(object, invocation,
-                                                                      error.get_raw_code(),
-                                                                      child_id.get_raw_id(),
-                                                                      title.get_text().c_str(),
-                                                                      title.is_translatable());
-        }
-        else
-            tdbus_lists_navigation_complete_get_parameterized_list_id(object, invocation,
-                                                                      error.get_raw_code(),
-                                                                      child_id.get_raw_id(),
-                                                                      "", false);
+gboolean DBusNavlists::get_parameterized_list_id_by_cookie(
+            tdbuslistsNavigation *object, GDBusMethodInvocation *invocation,
+            guint cookie, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetParamListID>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
+
+        tdbus_lists_navigation_complete_get_parameterized_list_id_by_cookie(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            std::get<1>(result).get_raw_id(),
+            std::get<2>(result).get_text().c_str(),
+            std::get<2>(result).is_translatable());
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        GetParamListID::slow_path_failure(object, invocation, ListError::BUSY);
     }
 
     return TRUE;
@@ -834,36 +1332,242 @@ gboolean DBusNavlists::get_root_link_to_context(tdbuslistsNavigation *object,
     return TRUE;
 }
 
+
+class GetURIs: public NavListsWork<std::tuple<ListError, std::vector<Url::String>,
+                                              ListItemKey>>
+{
+  private:
+    const ID::List list_id_;
+    const ID::Item item_id_;
+
+  public:
+    GetURIs(GetURIs &&) = default;
+    GetURIs &operator=(GetURIs &&) = default;
+
+    explicit GetURIs(ListTreeIface &listtree, ID::List list_id, ID::Item item_id):
+        NavListsWork(listtree),
+        list_id_(list_id),
+        item_id_(item_id)
+    {
+        log_assert(list_id_.is_valid());
+    }
+
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        static const char *const empty_list[] = { nullptr };
+        tdbus_lists_navigation_complete_get_uris(
+            object, invocation, cookie, error, empty_list,
+            g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, nullptr,
+                                      0, sizeof(unsigned char)));
+    }
+
+    static void slow_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  ListError::Code error)
+    {
+        static const char *const empty_list[] = { nullptr };
+        tdbus_lists_navigation_complete_get_uris_by_cookie(
+            object, invocation, error, empty_list,
+            g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, nullptr,
+                                      0, sizeof(unsigned char)));
+    }
+
+  protected:
+    bool do_run() final override
+    {
+        std::vector<Url::String> uris;
+        ListItemKey item_key;
+        ListError error =
+            listtree_.get_uris_for_item(list_id_, item_id_, uris, item_key);
+
+        promise_.set_value(
+            std::make_tuple(error, std::move(uris), std::move(item_key)));
+        put_error(error);
+
+        return error != ListError::INTERRUPTED;
+    }
+};
+
+static std::vector<const gchar *>
+uri_list_to_c_array(const std::vector<Url::String> &uris, const ListError &error)
+{
+    std::vector<const gchar *> c_array;
+
+    if(!error.failed())
+        std::transform(uris.begin(), uris.end(),
+            std::back_inserter(c_array),
+            [] (const auto &uri) { return uri.get_cleartext().c_str(); });
+
+    c_array.push_back(nullptr);
+
+    return c_array;
+}
+
 gboolean DBusNavlists::get_uris(tdbuslistsNavigation *object,
                                 GDBusMethodInvocation *invocation,
                                 guint list_id, guint item_id, IfaceData *data)
 {
     enter_handler(invocation);
 
-    data->listtree_.use_list(ID::List(list_id), true);
+    const ID::List id(list_id);
 
-    std::vector<Url::String> uris;
-    ListItemKey item_key;
-    ListError error =
-        data->listtree_.get_uris_for_item(ID::List(list_id), ID::Item(item_id),
-                                          uris, item_key);
+    if(!data->listtree_.use_list(id, true))
+    {
+        GetURIs::fast_path_failure(object, invocation, 0, ListError::INVALID_ID);
+        return TRUE;
+    }
 
-    std::vector<const gchar *> list_of_uris_for_dbus;
+    auto work =
+        std::make_shared<GetURIs>(data->listtree_, id, ID::Item(item_id));
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT);
 
-    if(!error.failed())
-        std::transform(uris.begin(), uris.end(),
-                       std::back_inserter(list_of_uris_for_dbus),
-                       [] (const auto &uri) { return uri.get_cleartext().c_str(); });
+    const auto eat_mode =
+        data->listtree_.q_navlists_get_uris_.add_work(std::move(work), nullptr)
+        ? CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK
+        : CookieJar::EatMode::WILL_WORK_FOR_COOKIES;
 
-    list_of_uris_for_dbus.push_back(NULL);
+    try
+    {
+        auto result(cookie_jar.try_eat<GetURIs>(cookie, eat_mode,
+            [object, invocation] (uint32_t c)
+            {
+                GetURIs::fast_path_failure(object, invocation, c, ListError::BUSY);
+            }));
 
-    tdbus_lists_navigation_complete_get_uris(object, invocation,
-                                             error.get_raw_code(),
-                                             list_of_uris_for_dbus.data(),
-                                             hash_to_variant(item_key));
+        /* fast path answer */
+        const ListError &error(std::get<0>(result));
+        const auto list_of_uris_for_dbus =
+            uri_list_to_c_array(std::get<1>(result), error);
+
+        tdbus_lists_navigation_complete_get_uris(
+            object, invocation, 0, error.get_raw_code(),
+            list_of_uris_for_dbus.data(), hash_to_variant(std::get<2>(result)));
+    }
+    catch(const TimeoutError &)
+    {
+        /* handled above */
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Unexpected failure (%d)", __LINE__);
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Internal error (%s)", e.what());
+    }
 
     return TRUE;
 }
+
+gboolean DBusNavlists::get_uris_by_cookie(tdbuslistsNavigation *object,
+                                          GDBusMethodInvocation *invocation,
+                                          guint cookie, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetURIs>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
+
+        const ListError &error(std::get<0>(result));
+        const auto list_of_uris_for_dbus =
+            uri_list_to_c_array(std::get<1>(result), error);
+
+        tdbus_lists_navigation_complete_get_uris_by_cookie(
+            object, invocation, error.get_raw_code(),
+            list_of_uris_for_dbus.data(), hash_to_variant(std::get<2>(result)));
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        GetURIs::slow_path_failure(object, invocation, ListError::BUSY);
+    }
+
+    return TRUE;
+}
+
+class GetRankedStreamLinks:
+    public NavListsWork<std::tuple<ListError, GVariantWrapper, ListItemKey>>
+{
+  private:
+    static constexpr const char *const DBUS_RETURN_TYPE_STRING = "a(uus)";
+    static constexpr const char *const DBUS_ELEMENT_TYPE_STRING = "(uus)";
+
+    const ID::List list_id_;
+    const ID::Item item_id_;
+
+  public:
+    GetRankedStreamLinks(GetRankedStreamLinks &&) = default;
+    GetRankedStreamLinks &operator=(GetRankedStreamLinks &&) = default;
+
+    explicit GetRankedStreamLinks(ListTreeIface &listtree,
+                                  ID::List list_id, ID::Item item_id):
+        NavListsWork(listtree),
+        list_id_(list_id),
+        item_id_(item_id)
+    {
+        log_assert(list_id_.is_valid());
+    }
+
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_ranked_stream_links(
+            object, invocation, cookie, error,
+            g_variant_new(DBUS_RETURN_TYPE_STRING, nullptr),
+            g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, nullptr,
+                                      0, sizeof(unsigned char)));
+    }
+
+    static void slow_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_ranked_stream_links_by_cookie(
+            object, invocation, error,
+            g_variant_new(DBUS_RETURN_TYPE_STRING, nullptr),
+            g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, nullptr,
+                                      0, sizeof(unsigned char)));
+    }
+
+  protected:
+    bool do_run() final override
+    {
+        std::vector<Url::RankedStreamLinks> ranked_links;
+        ListItemKey item_key;
+        ListError error =
+            listtree_.get_ranked_links_for_item(list_id_, item_id_,
+                                                ranked_links, item_key);
+
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE(DBUS_RETURN_TYPE_STRING));
+
+        if(!error.failed())
+            for(const auto &l : ranked_links)
+                g_variant_builder_add(&builder, DBUS_ELEMENT_TYPE_STRING,
+                                      l.get_rank(), l.get_bitrate(),
+                                      l.get_stream_link().url_.get_cleartext().c_str());
+
+        GVariantWrapper links(g_variant_builder_end(&builder));
+
+        promise_.set_value(
+            std::make_tuple(error, std::move(links), std::move(item_key)));
+        put_error(error);
+
+        return error != ListError::INTERRUPTED;
+    }
+};
 
 gboolean DBusNavlists::get_ranked_stream_links(tdbuslistsNavigation *object,
                                                GDBusMethodInvocation *invocation,
@@ -872,31 +1576,84 @@ gboolean DBusNavlists::get_ranked_stream_links(tdbuslistsNavigation *object,
 {
     enter_handler(invocation);
 
-    data->listtree_.use_list(ID::List(list_id), true);
+    const ID::List id(list_id);
 
-    std::vector<Url::RankedStreamLinks> links;
-    ListItemKey item_key;
-    ListError error =
-        data->listtree_.get_ranked_links_for_item(ID::List(list_id), ID::Item(item_id),
-                                                  links, item_key);
-
-    GVariantBuilder builder;
-    g_variant_builder_init(&builder, G_VARIANT_TYPE("a(uus)"));
-
-    if(!error.failed())
+    if(!data->listtree_.use_list(id, true))
     {
-        for(const auto &l : links)
-            g_variant_builder_add(&builder, "(uus)",
-                                  l.get_rank(), l.get_bitrate(),
-                                  l.get_stream_link().url_.get_cleartext().c_str());
+        GetRankedStreamLinks::fast_path_failure(object, invocation,
+                                                0, ListError::INVALID_ID);
+        return TRUE;
     }
 
-    GVariant *list_of_links_for_dbus = g_variant_builder_end(&builder);
+    auto work =
+        std::make_shared<GetRankedStreamLinks>(data->listtree_, id, ID::Item(item_id));
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT);
 
-    tdbus_lists_navigation_complete_get_ranked_stream_links(object, invocation,
-                                                            error.get_raw_code(),
-                                                            list_of_links_for_dbus,
-                                                            hash_to_variant(item_key));
+    const auto eat_mode =
+        data->listtree_.q_navlists_get_uris_.add_work(std::move(work), nullptr)
+        ? CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK
+        : CookieJar::EatMode::WILL_WORK_FOR_COOKIES;
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetRankedStreamLinks>(cookie, eat_mode,
+            [object, invocation] (uint32_t c)
+            {
+                GetRankedStreamLinks::fast_path_failure(object, invocation,
+                                                        c, ListError::BUSY);
+            }));
+
+        /* fast path answer */
+        tdbus_lists_navigation_complete_get_ranked_stream_links(
+            object, invocation, 0, std::get<0>(result).get_raw_code(),
+            GVariantWrapper::move(std::get<1>(result)),
+            hash_to_variant(std::get<2>(result)));
+    }
+    catch(const TimeoutError &)
+    {
+        /* handled above */
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Unexpected failure (%d)", __LINE__);
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Internal error (%s)", e.what());
+    }
+
+    return TRUE;
+}
+
+gboolean
+DBusNavlists::get_ranked_stream_links_by_cookie(tdbuslistsNavigation *object,
+                                                GDBusMethodInvocation *invocation,
+                                                guint cookie, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetRankedStreamLinks>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
+
+        tdbus_lists_navigation_complete_get_ranked_stream_links_by_cookie(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            GVariantWrapper::move(std::get<1>(result)),
+            hash_to_variant(std::get<2>(result)));
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        GetRankedStreamLinks::slow_path_failure(object, invocation, ListError::BUSY);
+    }
 
     return TRUE;
 }
@@ -1018,6 +1775,62 @@ gboolean DBusNavlists::get_location_key(tdbuslistsNavigation *object,
     return TRUE;
 }
 
+class GetLocationTrace:
+    public NavListsWork<std::tuple<ListError, std::unique_ptr<Url::Location>>>
+{
+  private:
+    const ID::List list_id_;
+    const ID::RefPos item_id_;
+    const ID::List ref_list_id_;
+    const ID::RefPos ref_item_id_;
+
+  public:
+    GetLocationTrace(GetLocationTrace &&) = default;
+    GetLocationTrace &operator=(GetLocationTrace &&) = default;
+
+    explicit GetLocationTrace(ListTreeIface &listtree,
+                              ID::List list_id, ID::RefPos item_id,
+                              ID::List ref_list_id, ID::RefPos ref_item_id):
+        NavListsWork(listtree),
+        list_id_(list_id),
+        item_id_(item_id),
+        ref_list_id_(ref_list_id),
+        ref_item_id_(ref_item_id)
+    {
+        log_assert(list_id_.is_valid());
+    }
+
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_location_trace(
+            object, invocation, cookie, error, "");
+    }
+
+    static void slow_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_get_location_trace_by_cookie(
+            object, invocation, error, "");
+    }
+
+  protected:
+    bool do_run() final override
+    {
+        ListError error;
+        auto location =
+            listtree_.get_location_trace(list_id_, item_id_,
+                                         ref_list_id_, ref_item_id_, error);
+
+        promise_.set_value(std::make_tuple(error, std::move(location)));
+        put_error(error);
+
+        return error != ListError::INTERRUPTED;
+    }
+};
+
 gboolean DBusNavlists::get_location_trace(tdbuslistsNavigation *object,
                                           GDBusMethodInvocation *invocation,
                                           guint list_id, guint item_id,
@@ -1029,7 +1842,9 @@ gboolean DBusNavlists::get_location_trace(tdbuslistsNavigation *object,
     const auto obj_list_id = ID::List(list_id);
     ListError error;
 
-    if(obj_list_id.is_valid())
+    if(!obj_list_id.is_valid())
+        error = ListError::INVALID_ID;
+    else
     {
         if(item_id == 0 ||
            (ref_list_id != 0 && ref_item_id == 0) ||
@@ -1037,29 +1852,85 @@ gboolean DBusNavlists::get_location_trace(tdbuslistsNavigation *object,
             error = ListError::NOT_SUPPORTED;
         else if(ref_list_id == 0 && ref_item_id != 0)
             error = ListError::INVALID_ID;
-
-        std::unique_ptr<Url::Location> location = error.failed()
-            ? nullptr
-            : data->listtree_.get_location_trace(obj_list_id,
-                                                 ID::RefPos(item_id),
-                                                 ID::List(ref_list_id),
-                                                 ID::RefPos(ref_item_id),
-                                                 error);
-
-        if(location != nullptr)
-        {
-            tdbus_lists_navigation_complete_get_location_trace(object, invocation,
-                                                             error.get_raw_code(),
-                                                             location->str().c_str());
-            return TRUE;
-        }
     }
-    else
-        error = ListError::INVALID_ID;
 
-    tdbus_lists_navigation_complete_get_location_trace(object, invocation,
-                                                       error.get_raw_code(),
-                                                       "");
+    if(error.failed())
+    {
+        GetLocationTrace::fast_path_failure(object, invocation, 0, error.get());
+        return TRUE;
+    }
+
+    auto work =
+        std::make_shared<GetLocationTrace>(data->listtree_,
+                                           obj_list_id, ID::RefPos(item_id),
+                                           ID::List(ref_list_id),
+                                           ID::RefPos(ref_item_id));
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT);
+
+    const auto eat_mode =
+        data->listtree_.q_navlists_realize_location_.add_work(std::move(work), nullptr)
+        ? CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK
+        : CookieJar::EatMode::WILL_WORK_FOR_COOKIES;
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetLocationTrace>(cookie, eat_mode,
+            [object, invocation] (uint32_t c)
+            {
+                GetLocationTrace::fast_path_failure(object, invocation, c,
+                                                    ListError::BUSY);
+            }));
+
+        /* fast path answer */
+        auto p = std::move(std::get<1>(result));
+        tdbus_lists_navigation_complete_get_location_trace(
+            object, invocation, cookie, std::get<0>(result).get_raw_code(),
+            p != nullptr ? std::get<1>(result)->str().c_str() : "");
+    }
+    catch(const TimeoutError &)
+    {
+        /* handled above */
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Unexpected failure (%d)", __LINE__);
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Internal error (%s)", e.what());
+    }
+
+    return TRUE;
+}
+
+gboolean DBusNavlists::get_location_trace_by_cookie(
+            tdbuslistsNavigation *object, GDBusMethodInvocation *invocation,
+            guint cookie, IfaceData *data)
+{
+    enter_handler(invocation);
+
+    try
+    {
+        auto result(cookie_jar.try_eat<GetLocationTrace>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
+
+        auto p = std::move(std::get<1>(result));
+        tdbus_lists_navigation_complete_get_location_trace_by_cookie(
+            object, invocation, std::get<0>(result).get_raw_code(),
+            p != nullptr ? std::get<1>(result)->str().c_str() : "");
+    }
+    catch(const BadCookieError &e)
+    {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
+                                              G_DBUS_ERROR_INVALID_ARGS,
+                                              "Invalid cookie (%s)", e.what());
+    }
+    catch(const TimeoutError &)
+    {
+        GetLocationTrace::slow_path_failure(object, invocation, ListError::BUSY);
+    }
 
     return TRUE;
 }
@@ -1078,6 +1949,14 @@ class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::
         url_(std::move(url))
     {
         log_assert(!url_.empty());
+    }
+
+    static void fast_path_failure(tdbuslistsNavigation *object,
+                                  GDBusMethodInvocation *invocation,
+                                  uint32_t cookie, ListError::Code error)
+    {
+        tdbus_lists_navigation_complete_realize_location(object, invocation,
+                                                         0, error);
     }
 
   protected:
@@ -1100,22 +1979,22 @@ gboolean DBusNavlists::realize_location(tdbuslistsNavigation *object,
 
     if(location_url[0] == '\0')
     {
-        tdbus_lists_navigation_complete_realize_location(object, invocation,
-                                                         ListError::INVALID_STRBO_URL,
-                                                         0);
+        RealizeLocation::fast_path_failure(object, invocation, 0,
+                                           ListError::INVALID_STRBO_URL);
         return TRUE;
     }
 
     if(!data->listtree_.can_handle_strbo_url(location_url))
     {
-        tdbus_lists_navigation_complete_realize_location(object, invocation,
-                                                         ListError::NOT_SUPPORTED,
-                                                         0);
+        RealizeLocation::fast_path_failure(object, invocation, 0,
+                                           ListError::NOT_SUPPORTED);
         return TRUE;
     }
 
     auto work = std::make_shared<RealizeLocation>(data->listtree_, location_url);
-    const uint32_t cookie = cookie_jar.pick_cookie_for_work(work);
+    const uint32_t cookie =
+        cookie_jar.pick_cookie_for_work(
+            work, CookieJar::DataAvailableNotificationMode::ALWAYS);
 
     data->listtree_.q_navlists_realize_location_.add_work(
         std::move(work),
@@ -1123,10 +2002,10 @@ gboolean DBusNavlists::realize_location(tdbuslistsNavigation *object,
         {
             if(is_async)
                 tdbus_lists_navigation_complete_realize_location(
-                    object, invocation, ListError::BUSY, cookie);
+                    object, invocation, cookie, ListError::BUSY);
             else if(is_sync_done)
                 tdbus_lists_navigation_complete_realize_location(
-                    object, invocation, ListError::OK, 0);
+                    object, invocation, 0, ListError::OK);
         });
 
     return TRUE;
@@ -1140,7 +2019,9 @@ gboolean DBusNavlists::realize_location_by_cookie(tdbuslistsNavigation *object,
 
     try
     {
-        auto result(cookie_jar.try_eat<RealizeLocation>(cookie));
+        auto result(cookie_jar.try_eat<RealizeLocation>(
+                        cookie, CookieJar::EatMode::MY_SLAVE_DOES_THE_ACTUAL_WORK,
+                        nullptr));
         const auto &url_result(std::get<1>(result));
 
         tdbus_lists_navigation_complete_realize_location_by_cookie(

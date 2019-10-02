@@ -61,10 +61,16 @@ gboolean get_list_contexts(tdbuslistsNavigation *object,
 gboolean get_range(tdbuslistsNavigation *object,
                    GDBusMethodInvocation *invocation, guint list_id,
                    guint first_item_id, guint count, IfaceData *data);
+gboolean get_range_by_cookie(tdbuslistsNavigation *object,
+                             GDBusMethodInvocation *invocation,
+                             guint cookie, IfaceData *data);
 gboolean get_range_with_meta_data(tdbuslistsNavigation *object,
                                   GDBusMethodInvocation *invocation,
                                   guint list_id, guint first_item_id,
                                   guint count, IfaceData *data);
+gboolean get_range_with_meta_data_by_cookie(tdbuslistsNavigation *object,
+                                            GDBusMethodInvocation *invocation,
+                                            guint cookie, IfaceData *data);
 gboolean check_range(tdbuslistsNavigation *object,
                      GDBusMethodInvocation *invocation,
                      guint list_id, guint first_item_id, guint count,
@@ -72,10 +78,16 @@ gboolean check_range(tdbuslistsNavigation *object,
 gboolean get_list_id(tdbuslistsNavigation *object,
                      GDBusMethodInvocation *invocation,
                      guint list_id, guint item_id, IfaceData *data);
+gboolean get_list_id_by_cookie(tdbuslistsNavigation *object,
+                               GDBusMethodInvocation *invocation,
+                               guint cookie, IfaceData *data);
 gboolean get_parameterized_list_id(tdbuslistsNavigation *object,
                                    GDBusMethodInvocation *invocation,
                                    guint list_id, guint item_id,
                                    const gchar *parameter, IfaceData *data);
+gboolean get_parameterized_list_id_by_cookie(tdbuslistsNavigation *object,
+                                             GDBusMethodInvocation *invocation,
+                                             guint cookie, IfaceData *data);
 gboolean get_parent_link(tdbuslistsNavigation *object,
                          GDBusMethodInvocation *invocation,
                          guint list_id, IfaceData *data);
@@ -85,9 +97,15 @@ gboolean get_root_link_to_context(tdbuslistsNavigation *object,
 gboolean get_uris(tdbuslistsNavigation *object,
                   GDBusMethodInvocation *invocation,
                   guint list_id, guint item_id, IfaceData *data);
+gboolean get_uris_by_cookie(tdbuslistsNavigation *object,
+                            GDBusMethodInvocation *invocation,
+                            guint cookie, IfaceData *data);
 gboolean get_ranked_stream_links(tdbuslistsNavigation *object,
                                  GDBusMethodInvocation *invocation,
                                  guint list_id, guint item_id, IfaceData *data);
+gboolean get_ranked_stream_links_by_cookie(tdbuslistsNavigation *object,
+                                           GDBusMethodInvocation *invocation,
+                                           guint cookie, IfaceData *data);
 gboolean discard_list(tdbuslistsNavigation *object,
                       GDBusMethodInvocation *invocation,
                       guint list_id, IfaceData *data);
@@ -106,6 +124,9 @@ gboolean get_location_trace(tdbuslistsNavigation *object,
                             guint list_id, guint item_id,
                             guint ref_list_id, guint ref_item_id,
                             IfaceData *data);
+gboolean get_location_trace_by_cookie(tdbuslistsNavigation *object,
+                                      GDBusMethodInvocation *invocation,
+                                      guint cookie, IfaceData *data);
 gboolean realize_location(tdbuslistsNavigation *object,
                           GDBusMethodInvocation *invocation,
                           const gchar *location_url, IfaceData *data);

@@ -49,8 +49,14 @@ static void connect_dbus_lists_handlers(GDBusConnection *connection,
     g_signal_connect(data->navigation_iface, "handle-get-range",
                      G_CALLBACK(DBusNavlists::get_range),
                      data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-get-range-by-cookie",
+                     G_CALLBACK(DBusNavlists::get_range_by_cookie),
+                     data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-get-range-with-meta-data",
                      G_CALLBACK(DBusNavlists::get_range_with_meta_data),
+                     data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-get-range-with-meta-data-by-cookie",
+                     G_CALLBACK(DBusNavlists::get_range_with_meta_data_by_cookie),
                      data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-check-range",
                      G_CALLBACK(DBusNavlists::check_range),
@@ -58,8 +64,14 @@ static void connect_dbus_lists_handlers(GDBusConnection *connection,
     g_signal_connect(data->navigation_iface, "handle-get-list-id",
                      G_CALLBACK(DBusNavlists::get_list_id),
                      data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-get-list-id-by-cookie",
+                     G_CALLBACK(DBusNavlists::get_list_id_by_cookie),
+                     data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-get-parameterized-list-id",
                      G_CALLBACK(DBusNavlists::get_parameterized_list_id),
+                     data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-get-parameterized-list-id-by-cookie",
+                     G_CALLBACK(DBusNavlists::get_parameterized_list_id_by_cookie),
                      data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-get-parent-link",
                      G_CALLBACK(DBusNavlists::get_parent_link),
@@ -70,8 +82,14 @@ static void connect_dbus_lists_handlers(GDBusConnection *connection,
     g_signal_connect(data->navigation_iface, "handle-get-uris",
                      G_CALLBACK(DBusNavlists::get_uris),
                      data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-get-uris-by-cookie",
+                     G_CALLBACK(DBusNavlists::get_uris_by_cookie),
+                     data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-get-ranked-stream-links",
                      G_CALLBACK(DBusNavlists::get_ranked_stream_links),
+                     data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-get-ranked-stream-links-by-cookie",
+                     G_CALLBACK(DBusNavlists::get_ranked_stream_links_by_cookie),
                      data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-discard-list",
                      G_CALLBACK(DBusNavlists::discard_list),
@@ -87,6 +105,9 @@ static void connect_dbus_lists_handlers(GDBusConnection *connection,
                      data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-get-location-trace",
                      G_CALLBACK(DBusNavlists::get_location_trace),
+                     data->iface_data);
+    g_signal_connect(data->navigation_iface, "handle-get-location-trace-by-cookie",
+                     G_CALLBACK(DBusNavlists::get_location_trace_by_cookie),
                      data->iface_data);
     g_signal_connect(data->navigation_iface, "handle-realize-location",
                      G_CALLBACK(DBusNavlists::realize_location),

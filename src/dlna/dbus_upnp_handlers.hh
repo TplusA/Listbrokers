@@ -24,6 +24,8 @@
 
 #include "upnp_listtree.hh"
 
+#include <gio/gio.h>
+
 /*!
  * \addtogroup dbus
  */

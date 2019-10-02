@@ -51,10 +51,14 @@ class ListTree: public ListTreeIface
     ListTree(const ListTree &) = delete;
     ListTree &operator=(const ListTree &) = delete;
 
-    explicit ListTree(DBusAsync::WorkQueue &navlists_realize_location,
+    explicit ListTree(DBusAsync::WorkQueue &navlists_get_range,
+                      DBusAsync::WorkQueue &navlists_get_list_id,
+                      DBusAsync::WorkQueue &navlists_get_uris,
+                      DBusAsync::WorkQueue &navlists_realize_location,
                       LRU::Cache &cache,
                       Cacheable::CheckNoOverrides &cache_check):
-        ListTreeIface(navlists_realize_location),
+        ListTreeIface(navlists_get_range, navlists_get_list_id,
+                      navlists_get_uris, navlists_realize_location),
         lt_manager_(cache, cache_check)
     {}
 

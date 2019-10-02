@@ -26,8 +26,6 @@
 #include <mutex>
 #include <functional>
 
-#include <gio/gio.h>
-
 #include "messages.h"
 
 namespace DBusAsync
@@ -37,8 +35,7 @@ namespace DBusAsync
  * Base class for D-Bus work meant to be passed to a work queue.
  *
  * This class manages the work item state and declares some basic members
- * required by all D-Bus work items (e.g., state ID, D-Bus proxy, locking,
- * ...).
+ * required by all D-Bus work items (e.g., state ID, locking, ...).
  */
 class Work
 {
