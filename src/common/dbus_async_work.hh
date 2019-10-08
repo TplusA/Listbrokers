@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -49,6 +49,8 @@ class Work
         CANCELED,  /*!< Canceled work, no result available. */
     };
 
+    const std::string &name_;
+
   private:
     /*! Current work item state. */
     State state_;
@@ -56,10 +58,37 @@ class Work
     /*! Called when work has completed (done or canceled). */
     std::function<void(bool)> notify_done_fn_;
 
+    class Times
+    {
+      private:
+        const std::chrono::time_point<std::chrono::steady_clock> created_;
+        std::chrono::time_point<std::chrono::steady_clock> scheduled_;
+        std::chrono::time_point<std::chrono::steady_clock> started_;
+        std::chrono::time_point<std::chrono::steady_clock> finished_;
+        bool was_scheduled_;
+        bool was_started_;
+
+      public:
+        explicit Times():
+            created_(std::chrono::steady_clock::now()),
+            was_scheduled_(false),
+            was_started_(false)
+        {}
+
+        void scheduled() { scheduled_ = std::chrono::steady_clock::now(); was_scheduled_ = true; }
+        void started()   { started_   = std::chrono::steady_clock::now(); was_started_ = true; }
+        void finished()  { finished_  = std::chrono::steady_clock::now(); }
+
+        void show(State state, const std::string &name) const;
+    };
+
+    Times times_;
+
   protected:
     std::mutex lock_;
 
-    explicit Work():
+    explicit Work(const std::string &name):
+        name_(name),
         state_(State::RUNNABLE)
     {}
 
@@ -82,6 +111,8 @@ class Work
                 static_cast<unsigned int>(state_));
             break;
         }
+
+        times_.show(state_, name_);
     }
 
     /*!
@@ -90,6 +121,7 @@ class Work
     void set_done_notification_function(std::function<void(bool)> &&fn)
     {
         notify_done_fn_ = std::move(fn);
+        times_.scheduled();
     }
 
     State get_state() const { return state_; }
@@ -115,12 +147,14 @@ class Work
           case State::RUNNABLE:
             {
                 set_work_state(State::RUNNING);
+                times_.started();
 
                 lock.unlock();
                 const auto state = do_run() ? State::DONE : State::CANCELED;
                 lock.lock();
 
                 set_work_state(state);
+                times_.finished();
             }
 
             return;
@@ -154,6 +188,7 @@ class Work
 
           case State::RUNNABLE:
             set_work_state(State::CANCELED);
+            times_.finished();
             return;
 
           case State::RUNNING:

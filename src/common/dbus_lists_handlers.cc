@@ -57,7 +57,9 @@ class NavListsWorkBase: public DBusAsync::Work
     ListError error_on_done_;
 
   protected:
-    explicit NavListsWorkBase() = default;
+    explicit NavListsWorkBase(const std::string &name):
+        DBusAsync::Work(name)
+    {}
 
   public:
     NavListsWorkBase(NavListsWorkBase &&) = default;
@@ -443,7 +445,8 @@ class NavListsWork: public NavListsWorkBase
     bool cancellation_requested_;
 
   protected:
-    explicit NavListsWork(ListTreeIface &listtree):
+    explicit NavListsWork(const std::string &name, ListTreeIface &listtree):
+        NavListsWorkBase(name),
         listtree_(listtree),
         promise_(std::promise<ResultType>()),
         future_(promise_.get_future()),
@@ -712,6 +715,7 @@ gboolean DBusNavlists::get_list_contexts(tdbuslistsNavigation *object,
 class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrapper>>
 {
   private:
+    static const std::string NAME;
     static constexpr const char *const DBUS_RETURN_TYPE_STRING = "a(sy)";
     static constexpr const char *const DBUS_ELEMENT_TYPE_STRING = "(sy)";
 
@@ -725,7 +729,7 @@ class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrap
 
     explicit GetRange(ListTreeIface &listtree, ID::List list_id,
                       ID::Item first_item_id, size_t count):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         list_id_(list_id),
         first_item_id_(first_item_id),
         count_(count)
@@ -788,6 +792,8 @@ class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrap
     }
 };
 
+const std::string GetRange::NAME("GetRange");
+
 /*!
  * Handler for de.tahifi.Lists.Navigation.GetRange().
  */
@@ -847,6 +853,7 @@ gboolean DBusNavlists::get_range_by_cookie(tdbuslistsNavigation *object,
 class GetRangeWithMetaData: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrapper>>
 {
   private:
+    static const std::string NAME;
     static constexpr const char *const DBUS_RETURN_TYPE_STRING = "a(sssyy)";
     static constexpr const char *const DBUS_ELEMENT_TYPE_STRING = "(sssyy)";
 
@@ -860,7 +867,7 @@ class GetRangeWithMetaData: public NavListsWork<std::tuple<ListError, ID::Item, 
 
     explicit GetRangeWithMetaData(ListTreeIface &listtree, ID::List list_id,
                       ID::Item first_item_id, size_t count):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         list_id_(list_id),
         first_item_id_(first_item_id),
         count_(count)
@@ -929,6 +936,8 @@ class GetRangeWithMetaData: public NavListsWork<std::tuple<ListError, ID::Item, 
         return error != ListError::INTERRUPTED;
     }
 };
+
+const std::string GetRangeWithMetaData::NAME = "GetRangeWithMetaData";
 
 /*!
  * Handler for de.tahifi.Lists.Navigation.GetRangeWithMetaData().
@@ -1029,6 +1038,7 @@ gboolean DBusNavlists::check_range(tdbuslistsNavigation *object,
 class GetListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::String>>
 {
   private:
+    static const std::string NAME;
     const ID::List list_id_;
     const ID::Item item_id_;
 
@@ -1038,7 +1048,7 @@ class GetListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::Strin
 
     explicit GetListID(ListTreeIface &listtree,
                        ID::List list_id, ID::Item item_id):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         list_id_(list_id),
         item_id_(item_id)
     {}
@@ -1095,6 +1105,8 @@ class GetListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::Strin
         return true;
     }
 };
+
+const std::string GetListID::NAME = "GetListID";
 
 /*!
  * Handler for de.tahifi.Lists.Navigation.GetListId().
@@ -1157,6 +1169,7 @@ gboolean DBusNavlists::get_list_id_by_cookie(tdbuslistsNavigation *object,
 class GetParamListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::String>>
 {
   private:
+    static const std::string NAME;
     const ID::List list_id_;
     const ID::Item item_id_;
     const std::string parameter_;
@@ -1168,7 +1181,7 @@ class GetParamListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::
     explicit GetParamListID(ListTreeIface &listtree,
                             ID::List list_id, ID::Item item_id,
                             std::string &&parameter):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         list_id_(list_id),
         item_id_(item_id),
         parameter_(std::move(parameter))
@@ -1218,6 +1231,8 @@ class GetParamListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::
         return error != ListError::INTERRUPTED;
     }
 };
+
+const std::string GetParamListID::NAME = "GetParamListID";
 
 /*!
  * Handler for de.tahifi.Lists.Navigation.GetParameterizedListId().
@@ -1366,6 +1381,7 @@ class GetURIs: public NavListsWork<std::tuple<ListError, std::vector<Url::String
                                               ListItemKey>>
 {
   private:
+    static const std::string NAME;
     const ID::List list_id_;
     const ID::Item item_id_;
 
@@ -1374,7 +1390,7 @@ class GetURIs: public NavListsWork<std::tuple<ListError, std::vector<Url::String
     GetURIs &operator=(GetURIs &&) = default;
 
     explicit GetURIs(ListTreeIface &listtree, ID::List list_id, ID::Item item_id):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         list_id_(list_id),
         item_id_(item_id)
     {
@@ -1418,6 +1434,8 @@ class GetURIs: public NavListsWork<std::tuple<ListError, std::vector<Url::String
         return error != ListError::INTERRUPTED;
     }
 };
+
+const std::string GetURIs::NAME = "GetURIs";
 
 static std::vector<const gchar *>
 uri_list_to_c_array(const std::vector<Url::String> &uris, const ListError &error)
@@ -1498,6 +1516,7 @@ class GetRankedStreamLinks:
     public NavListsWork<std::tuple<ListError, GVariantWrapper, ListItemKey>>
 {
   private:
+    static const std::string NAME;
     static constexpr const char *const DBUS_RETURN_TYPE_STRING = "a(uus)";
     static constexpr const char *const DBUS_ELEMENT_TYPE_STRING = "(uus)";
 
@@ -1510,7 +1529,7 @@ class GetRankedStreamLinks:
 
     explicit GetRankedStreamLinks(ListTreeIface &listtree,
                                   ID::List list_id, ID::Item item_id):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         list_id_(list_id),
         item_id_(item_id)
     {
@@ -1566,6 +1585,8 @@ class GetRankedStreamLinks:
         return error != ListError::INTERRUPTED;
     }
 };
+
+const std::string GetRankedStreamLinks::NAME = "GetRankedStreamLinks";
 
 /*!
  * Handler for de.tahifi.Lists.Navigation.GetRankedStreamLinks().
@@ -1748,6 +1769,7 @@ class GetLocationTrace:
     public NavListsWork<std::tuple<ListError, std::unique_ptr<Url::Location>>>
 {
   private:
+    static const std::string NAME;
     const ID::List list_id_;
     const ID::RefPos item_id_;
     const ID::List ref_list_id_;
@@ -1760,7 +1782,7 @@ class GetLocationTrace:
     explicit GetLocationTrace(ListTreeIface &listtree,
                               ID::List list_id, ID::RefPos item_id,
                               ID::List ref_list_id, ID::RefPos ref_item_id):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         list_id_(list_id),
         item_id_(item_id),
         ref_list_id_(ref_list_id),
@@ -1799,6 +1821,8 @@ class GetLocationTrace:
         return error != ListError::INTERRUPTED;
     }
 };
+
+const std::string GetLocationTrace::NAME = "GetLocationTrace";
 
 /*!
  * Handler for de.tahifi.Lists.Navigation.GetLocationTrace().
@@ -1875,6 +1899,7 @@ gboolean DBusNavlists::get_location_trace_by_cookie(
 class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::RealizeURLResult>>
 {
   private:
+    static const std::string NAME;
     const std::string url_;
 
   public:
@@ -1882,7 +1907,7 @@ class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::
     RealizeLocation &operator=(RealizeLocation &&) = default;
 
     explicit RealizeLocation(ListTreeIface &listtree, std::string &&url):
-        NavListsWork(listtree),
+        NavListsWork(NAME, listtree),
         url_(std::move(url))
     {
         log_assert(!url_.empty());
@@ -1914,6 +1939,8 @@ class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::
         return error != ListError::INTERRUPTED;
     }
 };
+
+const std::string RealizeLocation::NAME = "RealizeLocation";
 
 /*!
  * Handler for de.tahifi.Lists.Navigation.RealizeLocation().

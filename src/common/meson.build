@@ -86,7 +86,7 @@ strbourl_lib = static_library('strbourl',
     include_directories: dbus_iface_defs_includes)
 
 listtree_lib = static_library('listtree',
-    ['listtree_manager.cc', 'dbus_async_workqueue.cc'],
+    ['listtree_manager.cc', 'dbus_async_workqueue.cc', 'dbus_async_work.cc'],
     dependencies: [glib_deps, lists_dbus_dep],
     include_directories: dbus_iface_defs_includes)
 

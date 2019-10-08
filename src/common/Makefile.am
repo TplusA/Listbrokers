@@ -81,7 +81,8 @@ libdbus_artcache_iface_la_CXXFLAGS = $(AM_CXXFLAGS)
 liblisttree_la_SOURCES = \
     listtree_manager.cc listtree_manager.hh \
     cacheable.hh \
-    dbus_async_workqueue.cc dbus_async_workqueue.hh dbus_async_work.hh \
+    dbus_async_workqueue.cc dbus_async_workqueue.hh \
+    dbus_async_work.cc dbus_async_work.hh \
     listtree.hh idtypes.hh \
     $(DBUS_IFACES)/de_tahifi_lists_context.h
 liblisttree_la_CFLAGS = $(AM_CFLAGS)
