@@ -27,10 +27,38 @@
 
 #include <sstream>
 
+#define WITH_COLORS 0
+
 template <typename T>
 static inline auto us(const T &diff)
 {
     return std::chrono::duration_cast<std::chrono::microseconds>(diff);
+}
+
+static std::string colorize_bottleneck(const std::chrono::microseconds &us,
+                                       const std::chrono::microseconds &th_warn,
+                                       const std::chrono::microseconds &th_err)
+{
+    if(us < th_warn)
+        return std::to_string(us.count());
+
+#if WITH_COLORS
+    static const std::string color_off("\x1b[0m");
+    static const std::string warning_begin("\x1b[38;5;11m");
+    static const std::string &warning_end(color_off);
+    static const std::string too_long_begin("\x1b[38;5;202m");
+    static const std::string &too_long_end(color_off);
+#else /* !WITH_COLORS */
+    static const std::string warning_begin("*");
+    static const std::string &warning_end(warning_begin);
+    static const std::string too_long_begin("***");
+    static const std::string &too_long_end(too_long_begin);
+#endif /* WITH_COLORS */
+
+    if(us < th_err)
+        return warning_begin + std::to_string(us.count()) + warning_end;
+    else
+        return too_long_begin + std::to_string(us.count()) + too_long_end;
 }
 
 void DBusAsync::Work::Times::show(State state, const std::string &name) const
@@ -42,7 +70,7 @@ void DBusAsync::Work::Times::show(State state, const std::string &name) const
 
     std::ostringstream os;
     os << "Work item " << (name.empty() ? "(unknown)" : name) << " timings:\n"
-       << "- Life time: " << us(life_time).count() << " us";
+       << "- Life time: " << colorize_bottleneck(us(life_time), 200ms, 500ms) << " us";
 
     if(life_time >= 1s)
     {
@@ -86,13 +114,13 @@ void DBusAsync::Work::Times::show(State state, const std::string &name) const
         os << "- Idle     : " << us(started_ - created_).count() << " us\n";
 
         if(was_scheduled_)
-            os << "- In queue : " << us(started_ - scheduled_).count() << " us\n";
+            os << "- In queue : " << colorize_bottleneck(us(started_ - scheduled_), 20ms, 30ms) << " us\n";
     }
 
     if(state == State::DONE || state == State::CANCELED)
     {
-        os << "- Busy     : " << (was_started_ ? us(finished_ - started_).count() : 0) << " us\n";
-        os << "- Dispatch : " << us(destroyed - finished_).count() << " us\n";
+        os << "- Busy     : " << (was_started_ ? colorize_bottleneck(us(finished_ - started_), 150ms, 400ms) : "0") << " us\n";
+        os << "- Dispatch : " << colorize_bottleneck(us(destroyed - finished_), 30ms, 60ms) << " us\n";
     }
 
     msg_info("%s", os.str().c_str());
