@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -60,10 +60,7 @@ class GLibWrapper: public GLibWrapperIface
         auto *src = g_main_context_find_source_by_id(nullptr, active_timer_id);
 
         if(src != nullptr)
-        {
             g_source_destroy(src);
-            g_source_unref(src);
-        }
     }
 
     bool has_t_exceeded_expiry_time(int64_t t) const final override
