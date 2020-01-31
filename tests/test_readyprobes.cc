@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -99,7 +99,7 @@ void cut_setup()
     probe_2 = new Ready::SimpleProbe;
     ready = new Ready::Manager({ static_cast<Ready::Probe *>(probe_1), static_cast<Ready::Probe *>(probe_2) });
 
-    ready->add_watcher(std::bind(watcher, std::placeholders::_1, watcher_expectations), false);
+    ready->add_watcher([] (bool ready_state) { watcher(ready_state, watcher_expectations); }, false);
     watcher_expectations->check();
 }
 
@@ -124,7 +124,7 @@ void test_manager_reports_unready_on_watcher_registration_if_requested()
     ready = new Ready::Manager({ static_cast<Ready::Probe *>(probe_1), static_cast<Ready::Probe *>(probe_2) });
 
     watcher_expectations->expect_false();
-    ready->add_watcher(std::bind(watcher, std::placeholders::_1, watcher_expectations), true);
+    ready->add_watcher([] (bool ready_state) { watcher(ready_state, watcher_expectations); }, true);
 }
 
 void test_manager_reports_ready_on_watcher_registration_if_requested()
@@ -139,7 +139,7 @@ void test_manager_reports_ready_on_watcher_registration_if_requested()
     ready = new Ready::Manager({ static_cast<Ready::Probe *>(probe_1), static_cast<Ready::Probe *>(probe_2) });
 
     watcher_expectations->expect_true();
-    ready->add_watcher(std::bind(watcher, std::placeholders::_1, watcher_expectations), true);
+    ready->add_watcher([] (bool ready_state) { watcher(ready_state, watcher_expectations); }, true);
 }
 
 void test_manager_reports_unready_by_default()

@@ -124,7 +124,7 @@ class ListTreeIface
         q_navlists_get_uris_(navlists_get_uris),
         q_navlists_realize_location_(navlists_realize_location),
         cancel_blocking_operation_counter(0),
-        may_continue_fn_(std::bind(&ListTreeIface::is_blocking_operation_allowed, this))
+        may_continue_fn_([this] { return this->is_blocking_operation_allowed(); })
     {}
 
   public:
