@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -194,11 +194,25 @@ class CookieJar
      */
     void cookie_not_wanted(uint32_t cookie)
     {
-        std::lock_guard<std::mutex> lock(lock_);
+        std::shared_ptr<NavListsWorkBase> w;
 
-        auto it(work_by_cookie_.find(cookie));
-        if(it != work_by_cookie_.end())
-            it->second.work_->cancel();
+        {
+            std::lock_guard<std::mutex> lock(lock_);
+
+            auto it(work_by_cookie_.find(cookie));
+            if(it == work_by_cookie_.end())
+                return;
+
+            /* The cancel() function called below is likely to end up in
+             * #CookieJar::work_done_notification(), which will (1) lock this
+             * object, and (2) erase the work from the container. To avoid a
+             * deadlock and to avoid UB, we reference the work item and cancel
+             * it with this object unlocked. */
+            w = it->second.work_;
+        }
+
+        log_assert(w != nullptr);
+        w->cancel();
     }
 
     enum class EatMode
@@ -2025,9 +2039,15 @@ gboolean DBusNavlists::data_abort(tdbuslistsNavigation *object,
     GVariantIter iter;
     g_variant_iter_init(&iter, cookies);
     guint cookie;
+    gboolean keep_around;
 
-    while(g_variant_iter_loop(&iter,"u", &cookie))
-        cookie_jar.cookie_not_wanted(cookie);
+    while(g_variant_iter_loop(&iter,"(ub)", &cookie, &keep_around))
+    {
+        if(!keep_around)
+            cookie_jar.cookie_not_wanted(cookie);
+        else
+            MSG_NOT_IMPLEMENTED();
+    }
 
     tdbus_lists_navigation_complete_data_abort(object, invocation);
 

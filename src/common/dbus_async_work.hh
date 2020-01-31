@@ -150,10 +150,35 @@ class Work
                 times_.started();
 
                 lock.unlock();
-                const auto state = do_run() ? State::DONE : State::CANCELED;
+                const auto success = do_run();
                 lock.lock();
 
-                set_work_state(state);
+                /* state may have changed in the meantime */
+                switch(state_)
+                {
+                  case State::RUNNING:
+                    /* state hasn't changed, so we are done here */
+                    set_work_state(success ? State::DONE : State::CANCELED);
+                    break;
+
+                  case State::CANCELING:
+                    /* fix up for the case that #DBusAsync::Work::do_run() has
+                     * completed successfully, but the work item has been
+                     * canceled in the meantime */
+                    set_work_state(State::CANCELED);
+                    break;
+
+                  case State::RUNNABLE:
+                    MSG_UNREACHABLE();
+                    set_work_state(State::CANCELED);
+                    break;
+
+                  case State::DONE:
+                  case State::CANCELED:
+                    BUG("Unexpected final work state %d after run", int(state_));
+                    break;
+                }
+
                 times_.finished();
             }
 

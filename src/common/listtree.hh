@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -443,6 +443,17 @@ class ListTreeIface
         cancel_blocking_operation_counter.fetch_sub(1);
     }
 
+    /*!
+     * Support cancelation of work items which download something.
+     *
+     * While downloading something via libcurl, the periodiclly called progress
+     * callback calls this function to determine whether or not to continue
+     * with an download.
+     *
+     * \see
+     *     #ListTreeIface::push_cancel_blocking_operation(),
+     *     #ListTreeIface::pop_cancel_blocking_operation()
+     */
     bool is_blocking_operation_allowed() const
     {
         return cancel_blocking_operation_counter.load() == 0;
