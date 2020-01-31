@@ -263,6 +263,28 @@ class Work
         if(state == state_)
             return;
 
+        switch(state_)
+        {
+          case State::RUNNABLE:
+            BUG_IF(state == State::CANCELING, "%p RUNNABLE -> CANCELING", this);
+            break;
+
+          case State::RUNNING:
+            BUG_IF(state == State::RUNNABLE, "%p RUNNING -> RUNNABLE", this);
+            break;
+
+          case State::CANCELING:
+            BUG_IF(state == State::RUNNABLE, "%p CANCELING -> RUNNABLE", this);
+            BUG_IF(state == State::RUNNING,  "%p CANCELING -> RUNNING", this);
+            BUG_IF(state == State::DONE,     "%p CANCELING -> DONE", this);
+            break;
+
+          case State::DONE:
+          case State::CANCELED:
+            BUG("%p poing from final state %d to %d", this, int(state_), int(state));
+            break;
+        }
+
         state_ = state;
 
         if(notify_done_fn_ != nullptr)
