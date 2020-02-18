@@ -1,3 +1,35 @@
+2020-02-18  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.0 released.
+
+	* D-Bus interface changes: Adapted to new D-Bus interfaces for
+	  potentially long-running data retrievals.
+
+	  Clients are supposed to send a request for some data. If these data
+	  can are immediately available or can be retrieved within a very
+	  short period of time, then these data are returned to the client
+	  just like they were before.
+
+	  Otherwise, a cookie (a sufficiently unique numerical ID associated
+	  with the requested data) is returned to the client. When the data
+	  are available, the client gets notified. Finally, the client may
+	  fetch the data using the cookie.
+
+	  All D-Bus method calls involved are designed to return immediately
+	  so they can be used using synchronous D-Bus method invocations.
+	  Asynchronicity is achieved and introduced by the optional
+	  notification-and-fetch phase. This allows complete control over
+	  timeouts without running into standard D-Bus timeouts.
+
+	* Debugging: Time measurement for D-Bus work items so that we can
+	  discover bottlenecks.
+
+	* Misc: Fix double free bug; many improvements in code.
+
+	* Build system: Support Meson.
+
+	* Licensing: Changed license from GPLv3+ to GPLv2+.
+
 2019-03-15  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 4.2 released.
@@ -23,4 +55,4 @@
 	  can now be distributed under the terms of the GPL 3.
 
 
-Copyright 2015, 2016, 2017, 2018, 2019 T+A elektroakustik GmbH & Co. KG
+Copyright 2015--2020 T+A elektroakustik GmbH & Co. KG
