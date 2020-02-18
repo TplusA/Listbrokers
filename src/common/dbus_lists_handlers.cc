@@ -264,12 +264,6 @@ class CookieJar
      *     to the \p cookie. May be \c nullptr (do this in the \c ByCookie
      *     result fetcher methods).
      *
-     * \param on_timeout
-     *     In case the work couldn't be finished within the short time granted
-     *     for fast path work, this function will be called with its parameter
-     *     to the \p cookie. May be \c nullptr (do this in the \c ByCookie
-     *     result fetcher methods).
-     *
      * \returns
      *     The return value of #NavListsWork<WorkType>::wait_for().
      */
