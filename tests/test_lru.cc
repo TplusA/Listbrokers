@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2018--2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -27,6 +27,7 @@
 #include <array>
 
 #include "mock_messages.hh"
+#include "mock_backtrace.hh"
 #include "mock_timebase.hh"
 
 #include "lru.hh"
@@ -344,6 +345,7 @@ namespace lru_cache_tests
 {
 
 static MockMessages *mock_messages;
+static MockBacktrace *mock_backtrace;
 
 static LRU::Cache *cache;
 static constexpr size_t maximum_number_of_objects = 500;
@@ -359,6 +361,11 @@ void cut_setup(void)
     cppcut_assert_not_null(mock_messages);
     mock_messages->init();
     mock_messages_singleton = mock_messages;
+
+    mock_backtrace = new MockBacktrace;
+    cppcut_assert_not_null(mock_backtrace);
+    mock_backtrace->init();
+    mock_backtrace_singleton = mock_backtrace;
 
     mock_messages->ignore_messages_with_level_or_above(MESSAGE_LEVEL_TRACE);
 
@@ -382,6 +389,11 @@ void cut_teardown(void)
     obliviate_expectations->check();
     delete obliviate_expectations;
     obliviate_expectations = nullptr;
+
+    mock_backtrace->check();
+    mock_backtrace_singleton = nullptr;
+    delete mock_backtrace;
+    mock_backtrace = nullptr;
 
     mock_messages->check();
     mock_messages_singleton = nullptr;
@@ -780,6 +792,7 @@ void test_objects_must_be_inserted_in_order_of_creation_or_use()
 
     mock_messages->expect_msg_error(0, LOG_CRIT,
                                     "BUG: Attempted to insert outdated object into cache");
+    mock_backtrace->expect_backtrace_log();
 
     cppcut_assert_equal(0U, cache->insert(std::move(a), LRU::CacheMode::CACHED, 0, 30).get_raw_id());
     cppcut_assert_equal(size_t(1), cache->count());
@@ -803,6 +816,7 @@ void test_can_only_insert_objects_if_parent_is_also_inserted()
 
     mock_messages->expect_msg_error(0, LOG_CRIT,
                                     "BUG: Attempted to insert object into cache with unknown parent");
+    mock_backtrace->expect_backtrace_log();
 
     cppcut_assert_equal(size_t(0), cache->count());
     cppcut_assert_equal(0U, cache->insert(std::shared_ptr<LRU::Entry>(b),

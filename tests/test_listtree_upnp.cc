@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -26,6 +26,7 @@
 #include <cppcutter.h>
 
 #include "mock_messages.hh"
+#include "mock_backtrace.hh"
 #include "mock_dbus_upnp_helpers.hh"
 #include "mock_dbus_lists_iface.hh"
 #include "mock_listbrokers_dbus.hh"
@@ -66,6 +67,7 @@ namespace upnp_listtree_tests
 {
 
 static MockMessages *mock_messages;
+static MockBacktrace *mock_backtrace;
 static MockDBusUPnPHelpers *mock_dbus_upnp_helpers;
 static MockDBusListsIface *mock_dbus_lists_iface;
 static MockListbrokersDBus *mock_listbrokers_dbus;
@@ -116,6 +118,11 @@ void cut_setup()
     cppcut_assert_not_null(mock_messages);
     mock_messages->init();
     mock_messages_singleton = mock_messages;
+
+    mock_backtrace = new MockBacktrace;
+    cppcut_assert_not_null(mock_backtrace);
+    mock_backtrace->init();
+    mock_backtrace_singleton = mock_backtrace;
 
     mock_dbus_upnp_helpers = new MockDBusUPnPHelpers;
     cppcut_assert_not_null(mock_dbus_upnp_helpers);
@@ -176,6 +183,11 @@ void cut_teardown()
     mock_dbus_upnp_helpers_singleton = nullptr;
     delete mock_dbus_upnp_helpers;
     mock_dbus_upnp_helpers = nullptr;
+
+    mock_backtrace->check();
+    mock_backtrace_singleton = nullptr;
+    delete mock_backtrace;
+    mock_backtrace = nullptr;
 
     mock_messages->check();
     mock_messages_singleton = nullptr;
@@ -861,6 +873,7 @@ void test_enter_empty_content_directory_throws_exception_and_emits_bug_message()
     /* accessing first element of child list yields bug report */
     mock_messages->expect_msg_error_formatted(0, LOG_CRIT,
         "BUG: requested tile list materialization around 0, but have only 0 items");
+    mock_backtrace->expect_backtrace_log();
 
     const void *pointer = nullptr;
 

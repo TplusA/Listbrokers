@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015, 2017, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015, 2017--2020  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -52,6 +52,7 @@ check_LTLIBRARIES = \
 test_lru_la_SOURCES = \
     test_lru.cc mock_expectation.hh \
     mock_messages.hh mock_messages.cc \
+    mock_backtrace.hh mock_backtrace.cc \
     mock_timebase.hh
 test_lru_la_LIBADD = $(top_builddir)/src/common/liblru.la
 test_lru_la_CFLAGS = $(AM_CFLAGS)
@@ -63,6 +64,7 @@ test_lru_upnp_la_SOURCES = \
     mock_dbus_upnp_helpers.hh mock_dbus_upnp_helpers.cc \
     mock_upnp_dleynaserver_dbus.hh mock_upnp_dleynaserver_dbus.cc \
     mock_messages.hh mock_messages.cc \
+    mock_backtrace.hh mock_backtrace.cc \
     mock_timebase.hh
 test_lru_upnp_la_LIBADD = $(top_builddir)/src/common/liblru.la $(top_builddir)/src/dlna/libupnp_list.la
 test_lru_upnp_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/dlna -I$(top_builddir)/src/dlna
@@ -77,6 +79,7 @@ test_listtree_upnp_la_SOURCES = \
     mock_listbrokers_dbus.hh mock_listbrokers_dbus.cc \
     mock_upnp_dleynaserver_dbus.hh mock_upnp_dleynaserver_dbus.cc \
     mock_messages.hh mock_messages.cc \
+    mock_backtrace.hh mock_backtrace.cc \
     mock_timebase.hh
 test_listtree_upnp_la_LIBADD = \
     $(top_builddir)/src/common/liblru.la \
@@ -89,6 +92,7 @@ test_listtree_upnp_la_CXXFLAGS = $(AM_CXXFLAGS) $(LISTBROKER_DEPENDENCIES_CFLAGS
 test_cacheable_overrides_la_SOURCES = \
     test_cacheable_overrides.cc \
     mock_messages.hh mock_messages.cc \
+    mock_backtrace.hh mock_backtrace.cc \
     mock_timebase.hh
 test_cacheable_overrides_la_LIBADD = \
     $(top_builddir)/src/common/liblru.la \

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2018, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -27,6 +27,7 @@
 #include <algorithm>
 
 #include "mock_messages.hh"
+#include "mock_backtrace.hh"
 #include "mock_timebase.hh"
 
 #include "cacheable.hh"
@@ -432,6 +433,7 @@ class Object: public LRU::Entry
 };
 
 static MockMessages *mock_messages;
+static MockBacktrace *mock_backtrace;
 static MockTimebase mock_timebase;
 Timebase *LRU::timebase = &mock_timebase;
 
@@ -452,6 +454,11 @@ void cut_setup()
     cppcut_assert_not_null(mock_messages);
     mock_messages->init();
     mock_messages_singleton = mock_messages;
+
+    mock_backtrace = new MockBacktrace;
+    cppcut_assert_not_null(mock_backtrace);
+    mock_backtrace->init();
+    mock_backtrace_singleton = mock_backtrace;
 
     cache = new LRU::Cache(500000, maximum_number_of_objects,
                            std::chrono::minutes(1));
@@ -478,6 +485,11 @@ void cut_teardown()
 
     delete cache;
     cache = nullptr;
+
+    mock_backtrace->check();
+    mock_backtrace_singleton = nullptr;
+    delete mock_backtrace;
+    mock_backtrace = nullptr;
 
     mock_messages->check();
     mock_messages_singleton = nullptr;
@@ -513,9 +525,11 @@ void test_invalid_list_id_is_defined_noncacheble()
 void test_nonexistent_list_ids_are_defined_noncacheble()
 {
     mock_messages->expect_msg_error_formatted(0, LOG_CRIT, "BUG: No list in cache for ID 23");
+    mock_backtrace->expect_backtrace_log();
     cut_assert_false(overrides->is_cacheable(ID::List(23)));
 
     mock_messages->expect_msg_error_formatted(0, LOG_CRIT, "BUG: No list in cache for ID 134217751");
+    mock_backtrace->expect_backtrace_log();
     cut_assert_false(overrides->is_cacheable(ID::List(23U | ID::List::NOCACHE_BIT)));
 }
 

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2020  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -62,6 +62,7 @@ executable(
         '../common/dbus_common.c',
         '../common/messages.c',
         '../common/messages_glib.c',
+        '../common/backtrace.c',
         '../common/os.c',
         '../common/urlstring.cc',
         version_info

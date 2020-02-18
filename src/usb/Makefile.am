@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -61,6 +61,8 @@ strbo_lb_usb_SOURCES = \
     ../common/messages.c \
     ../common/messages_glib.h \
     ../common/messages_glib.c \
+    ../common/backtrace.h \
+    ../common/backtrace.c \
     ../common/os.h \
     ../common/os.c \
     ../common/urlstring.cc \
