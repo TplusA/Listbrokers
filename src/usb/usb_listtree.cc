@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -956,9 +956,9 @@ USB::ListTree::get_location_key(const ID::List list_id, const ID::RefPos item_po
     error = ListError::OK;
 
     if(simple_key != nullptr)
-        return std::move(simple_key);
+        return simple_key;
     else
-        return std::move(reference_key);
+        return reference_key;
 }
 
 static bool handle_reference_point(ID::List list_id, ID::Item item_id,
@@ -1131,5 +1131,5 @@ USB::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
 
     error = ListError::OK;
 
-    return std::move(trace);
+    return trace;
 }
