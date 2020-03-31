@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2018, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -44,6 +44,6 @@ tdbusupnpMediaContainer2 *create_media_container_proxy_for_object_path(const cha
 tdbusupnpMediaItem2 *create_media_item_proxy_for_object_path(const char *path);
 uint32_t get_size_of_container(const std::string &path);
 
-};
+}
 
 #endif /* !DBUS_UPNP_HELPERS_HH */

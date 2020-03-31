@@ -266,22 +266,22 @@ class Work
         switch(state_)
         {
           case State::RUNNABLE:
-            BUG_IF(state == State::CANCELING, "%p RUNNABLE -> CANCELING", this);
+            BUG_IF(state == State::CANCELING, "%p RUNNABLE -> CANCELING", static_cast<const void *>(this));
             break;
 
           case State::RUNNING:
-            BUG_IF(state == State::RUNNABLE, "%p RUNNING -> RUNNABLE", this);
+            BUG_IF(state == State::RUNNABLE, "%p RUNNING -> RUNNABLE", static_cast<const void *>(this));
             break;
 
           case State::CANCELING:
-            BUG_IF(state == State::RUNNABLE, "%p CANCELING -> RUNNABLE", this);
-            BUG_IF(state == State::RUNNING,  "%p CANCELING -> RUNNING", this);
-            BUG_IF(state == State::DONE,     "%p CANCELING -> DONE", this);
+            BUG_IF(state == State::RUNNABLE, "%p CANCELING -> RUNNABLE", static_cast<const void *>(this));
+            BUG_IF(state == State::RUNNING,  "%p CANCELING -> RUNNING", static_cast<const void *>(this));
+            BUG_IF(state == State::DONE,     "%p CANCELING -> DONE", static_cast<const void *>(this));
             break;
 
           case State::DONE:
           case State::CANCELED:
-            BUG("%p poing from final state %d to %d", this, int(state_), int(state));
+            BUG("%p going from final state %d to %d", static_cast<const void *>(this), int(state_), int(state));
             break;
         }
 
@@ -308,6 +308,6 @@ class Work
     }
 };
 
-};
+}
 
 #endif /* !DBUS_ASYNC_WORK_HH */

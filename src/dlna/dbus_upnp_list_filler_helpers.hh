@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -33,6 +33,6 @@ const TiledListFillerIface<T> &get_tiled_list_filler_for_root_directory();
 
 void init_standard_dbus_fillers(const LRU::Cache &cache);
 
-};
+}
 
 #endif /* !DBUS_UPNP_LIST_FILLER_HELPERS_HH */

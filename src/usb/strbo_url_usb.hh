@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -506,6 +506,6 @@ class LocationTrace: public ::Url::Location
     }
 };
 
-};
+}
 
 #endif /* !STRBO_URL_USB_HH */

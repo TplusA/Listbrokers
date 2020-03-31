@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2017, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2017--2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -178,7 +178,7 @@ class AddToListAsyncData
 
 namespace UpnpServerListDetail  {
   static bool is_media_server_local(tdbusdleynaserverMediaDevice *proxy);
-};
+}
 
 bool UpnpServerListDetail::is_media_server_local(tdbusdleynaserverMediaDevice *proxy)
 {

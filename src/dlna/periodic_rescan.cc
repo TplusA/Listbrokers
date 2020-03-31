@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -86,7 +86,7 @@ void UPnP::PeriodicRescan::enable()
     if(timeout_id_ == 0)
         msg_error(0, LOG_ERR,
                   "Failed registering timeout function for UPnP rescanning");
-};
+}
 
 void UPnP::PeriodicRescan::disable()
 {

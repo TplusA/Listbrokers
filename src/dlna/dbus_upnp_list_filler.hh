@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -61,6 +61,6 @@ class DBusUPnPFiller: public TiledListFillerIface<ItemData>
                  const std::function<bool()> &may_continue) const override;
 };
 
-};
+}
 
 #endif /* !DBUS_UPNP_LIST_FILLER_HH */

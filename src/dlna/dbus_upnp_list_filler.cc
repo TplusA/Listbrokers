@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -45,7 +45,7 @@ namespace UPnP
     {
         return standard_dbus_filler;
     }
-};
+}
 
 static ListError fill_list_item_from_upnp_data(UPnP::ItemData &&list_item,
                                                GVariant *child_data)
