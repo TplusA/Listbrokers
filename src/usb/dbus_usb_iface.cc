@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -71,12 +71,12 @@ void DBusUSB::dbus_setup(bool connect_to_session_bus, const char *dbus_object_pa
 
     const struct dbus_register_submodule_t self =
     {
-        .connect_to_session_bus = connect_to_session_bus,
-        .user_data = &dbus_usb_data,
-        .bus_acquired = nullptr,
-        .name_acquired = connect_dbus_signals,
-        .destroy_notification = nullptr,
-        .shutdown = shutdown_dbus,
+        connect_to_session_bus,
+        &dbus_usb_data,
+        nullptr,
+        connect_dbus_signals,
+        nullptr,
+        shutdown_dbus,
     };
 
     dbus_common_register_submodule(&self);

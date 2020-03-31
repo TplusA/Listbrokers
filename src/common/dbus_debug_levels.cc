@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -99,14 +99,13 @@ void DBusDebugLevels::dbus_setup(bool connect_to_session_bus,
 
     const struct dbus_register_submodule_t self =
     {
-        .connect_to_session_bus = connect_to_session_bus,
-        .user_data = &dbus_debug_levels_data,
-        .bus_acquired = export_self,
-        .name_acquired = connect_dbus_signals,
-        .destroy_notification = nullptr,
-        .shutdown = shutdown_dbus,
+        connect_to_session_bus,
+        &dbus_debug_levels_data,
+        export_self,
+        connect_dbus_signals,
+        nullptr,
+        shutdown_dbus,
     };
 
     dbus_common_register_submodule(&self);
 }
-

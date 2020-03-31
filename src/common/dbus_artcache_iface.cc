@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -64,12 +64,12 @@ void DBusArtCache::dbus_setup(bool connect_to_session_bus)
 
     const struct dbus_register_submodule_t self =
     {
-        .connect_to_session_bus = connect_to_session_bus,
-        .user_data = &dbus_artcache_data,
-        .bus_acquired = nullptr,
-        .name_acquired = connect_to_artcache,
-        .destroy_notification = nullptr,
-        .shutdown = shutdown_dbus,
+        connect_to_session_bus,
+        &dbus_artcache_data,
+        nullptr,
+        connect_to_artcache,
+        nullptr,
+        shutdown_dbus,
     };
 
     dbus_common_register_submodule(&self);
