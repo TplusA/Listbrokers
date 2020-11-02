@@ -416,15 +416,12 @@ void test_no_memory_leaks()
     mock_messages->expect_msg_error_formatted(
         0, LOG_CRIT,
         "BUG: Got obliviate notification for child 3, but could not find it in list with ID 2");
-    mock_backtrace->expect_backtrace_log();
     mock_messages->expect_msg_error_formatted(
         0, LOG_CRIT,
         "BUG: Got obliviate notification for child 4, but could not find it in list with ID 2");
-    mock_backtrace->expect_backtrace_log();
     mock_messages->expect_msg_error_formatted(
         0, LOG_CRIT,
         "BUG: Got obliviate notification for server root 2, but could not find it in server list (ID 1)");
-    mock_backtrace->expect_backtrace_log();
     cache->gc();
 
     cppcut_assert_equal(2L, root.use_count());

@@ -873,7 +873,6 @@ void test_enter_empty_content_directory_throws_exception_and_emits_bug_message()
     /* accessing first element of child list yields bug report */
     mock_messages->expect_msg_error_formatted(0, LOG_CRIT,
         "BUG: requested tile list materialization around 0, but have only 0 items");
-    mock_backtrace->expect_backtrace_log();
 
     const void *pointer = nullptr;
 

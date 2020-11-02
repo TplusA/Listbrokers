@@ -525,11 +525,9 @@ void test_invalid_list_id_is_defined_noncacheble()
 void test_nonexistent_list_ids_are_defined_noncacheble()
 {
     mock_messages->expect_msg_error_formatted(0, LOG_CRIT, "BUG: No list in cache for ID 23");
-    mock_backtrace->expect_backtrace_log();
     cut_assert_false(overrides->is_cacheable(ID::List(23)));
 
     mock_messages->expect_msg_error_formatted(0, LOG_CRIT, "BUG: No list in cache for ID 134217751");
-    mock_backtrace->expect_backtrace_log();
     cut_assert_false(overrides->is_cacheable(ID::List(23U | ID::List::NOCACHE_BIT)));
 }
 

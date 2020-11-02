@@ -792,7 +792,6 @@ void test_objects_must_be_inserted_in_order_of_creation_or_use()
 
     mock_messages->expect_msg_error(0, LOG_CRIT,
                                     "BUG: Attempted to insert outdated object into cache");
-    mock_backtrace->expect_backtrace_log();
 
     cppcut_assert_equal(0U, cache->insert(std::move(a), LRU::CacheMode::CACHED, 0, 30).get_raw_id());
     cppcut_assert_equal(size_t(1), cache->count());
@@ -816,7 +815,6 @@ void test_can_only_insert_objects_if_parent_is_also_inserted()
 
     mock_messages->expect_msg_error(0, LOG_CRIT,
                                     "BUG: Attempted to insert object into cache with unknown parent");
-    mock_backtrace->expect_backtrace_log();
 
     cppcut_assert_equal(size_t(0), cache->count());
     cppcut_assert_equal(0U, cache->insert(std::shared_ptr<LRU::Entry>(b),
