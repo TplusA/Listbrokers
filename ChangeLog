@@ -1,3 +1,13 @@
+2020-11-23  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.1 released.
+
+	* Misc: Update Git submodules.
+
+	* Misc: Fix several compiler warnings.
+
+	* Misc: Several modernizations.
+
 2020-02-18  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.0 released.
