@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -90,6 +90,31 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     else if(ret > 0)
         return EXIT_SUCCESS;
+
+    std::set_terminate([]
+    {
+        const auto ce = std::current_exception();
+
+        if(ce == nullptr)
+            msg_error(0, LOG_EMERG, "Terminate without active exception");
+        else
+        {
+            try
+            {
+                std::rethrow_exception(ce);
+            }
+            catch(const std::exception &e)
+            {
+                msg_error(0, LOG_EMERG, "Unhandled exception: %s", e.what());
+            }
+            catch(...)
+            {
+                msg_error(0, LOG_EMERG, "Unhandled exception: *** UNKNOWN ***");
+            }
+        }
+
+        os_abort();
+    });
 
     LBApp::log_version_info();
 
