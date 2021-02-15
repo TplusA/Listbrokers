@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2018, 2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -1168,7 +1168,7 @@ class ListTiles_
                       "materialize center tile around index %u", idx.get_raw_id());
 
             size_t tile_index = find_free_tile();
-            log_assert(tile_index >= 0 && tile_index < maximum_number_of_active_tiles);
+            log_assert(tile_index < maximum_number_of_active_tiles);
             auto tile = hot_tiles_[tile_index].activate_tile(idx);
             active_tiles_[size_t(ItemLocation::CENTER)] = tile;
 
