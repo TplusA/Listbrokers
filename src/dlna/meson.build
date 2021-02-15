@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -19,41 +19,34 @@
 # MA  02110-1301, USA.
 #
 
-dleynaserver_dbus_src = gnome.gdbus_codegen('com_intel_dleynaserver',
-    sources: '../../dbus_interfaces/com_intel_dleynaserver.xml',
-    interface_prefix: 'com.intel.dLeynaServer.',
-    namespace: 'tdbus_dleynaserver')
-dleynaserver_dbus_lib = static_library('dleynaserver',
-    dleynaserver_dbus_src,
-    include_directories: '../common',
-    dependencies: glib_deps, c_args: relaxed_dbus_warnings)
-dleynaserver_dbus_dep = declare_dependency(link_with: dleynaserver_dbus_lib)
-dbus_docs += custom_target('dleynaserver_docs',
-    input: '../../dbus_interfaces/com_intel_dleynaserver.xml',
-    output: ['@BASENAME@-doc.md', '@BASENAME@-doc.h'],
-    command: [
-        extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
-        '-c', 'tdbus_dleynaserver', '-s', 'com.intel.dLeynaServer.',
-        '-n', 'DLNA Server Management'
-    ])
+dbus_iface_data = [
+    ['com_intel_dleynaserver', 'com.intel.dLeynaServer.', 'tdbus_dleynaserver', 'DLNA Server Management'],
+    ['org_gnome_upnp',         'org.gnome.UPnP.',         'tdbus_upnp',         'DLNA Access'],
+]
 
-upnp_media_dbus_src = gnome.gdbus_codegen('org_gnome_upnp',
-    sources: '../../dbus_interfaces/org_gnome_upnp.xml',
-    interface_prefix: 'org.gnome.UPnP.',
-    namespace: 'tdbus_upnp')
-upnp_media_dbus_lib = static_library('upnp_media',
-    upnp_media_dbus_src,
-    include_directories: '../common',
-    dependencies: glib_deps, c_args: relaxed_dbus_warnings)
-upnp_media_dbus_dep = declare_dependency(link_with: upnp_media_dbus_lib)
-dbus_docs += custom_target('upnp_media_docs',
-    input: '../../dbus_interfaces/org_gnome_upnp.xml',
-    output: ['@BASENAME@-doc.md', '@BASENAME@-doc.h'],
-    command: [
-        extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
-        '-c', 'tdbus_upnp', '-s', 'org.gnome.UPnP.',
-        '-n', 'DLNA Server Management'
-    ])
+dbus_dlna_deps = []
+
+foreach d : dbus_iface_data
+    dbus_dlna_deps += declare_dependency(
+        link_with: static_library(
+            d[0].split('_')[-1] + '_dbus',
+            gnome.gdbus_codegen(d[0],
+                                sources: dbus_iface_dir / d[0] + '.xml',
+                                interface_prefix: d[1],
+                                namespace: d[2]),
+            dependencies: [glib_deps, config_h],
+            c_args: relaxed_dbus_warnings),
+        include_directories: dbus_iface_defs_includes
+    )
+
+    dbus_docs += custom_target(d[0] + '_docs',
+        input: dbus_iface_dir / d[0] + '.xml',
+        output: ['@BASENAME@-doc.md', '@BASENAME@-doc.h'],
+        command: [
+            extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
+            '-c', d[2], '-s', d[1], '-n', d[3]
+        ])
+endforeach
 
 upnp_list_lib = static_library('upnp_list',
     ['upnp_list.cc', 'upnp_listtree.cc'],
@@ -89,11 +82,8 @@ executable(
     include_directories: dbus_iface_defs_includes,
     dependencies: [
         glib_deps,
-        artcache_dbus_dep,
-        debug_dbus_dep,
-        dleynaserver_dbus_dep,
-        lists_dbus_dep,
-        upnp_media_dbus_dep,
+        dbus_common_deps,
+        dbus_dlna_deps,
         config_h,
     ],
     link_with: [
@@ -102,6 +92,7 @@ executable(
         dbus_lists_iface_lib,
         dbus_upnp_handlers_lib,
         dbus_upnp_helpers_lib,
+        debug_dbus_lib,
         listtree_lib,
         lru_lib,
         md5_lib,

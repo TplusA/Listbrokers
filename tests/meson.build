@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -36,7 +36,7 @@ cutter_wrap_args = [
 
 cacheable_overrides_tests = shared_module('test_cacheable_overrides',
     ['test_cacheable_overrides.cc', 'mock_messages.cc', 'mock_backtrace.cc'],
-    cpp_args: '-Wno-pedantic',
+    cpp_args: ['-Wno-pedantic', '-Wno-clobbered'],
     include_directories: ['../src/common', '../dbus_interfaces'],
     dependencies: cutter_dep,
     link_with: [lru_lib, cacheable_lib]
@@ -50,7 +50,7 @@ listtree_upnp_tests = shared_module('test_listtree_upnp',
     ['test_listtree_upnp.cc', 'mock_dbus_upnp_helpers.cc',
      'mock_dbus_lists_iface.cc', 'mock_listbrokers_dbus.cc',
      'mock_upnp_dleynaserver_dbus.cc', 'mock_messages.cc', 'mock_backtrace.cc'],
-    cpp_args: '-Wno-pedantic',
+    cpp_args: ['-Wno-pedantic', '-Wno-clobbered'],
     include_directories: ['../src/common', '../src/dlna', '../dbus_interfaces'],
     dependencies: [cutter_dep, glib_deps],
     link_with: [lru_lib, upnp_list_lib, listtree_lib]
@@ -62,7 +62,7 @@ test('UPnP List Tree',
 
 lru_tests = shared_module('test_lru',
     ['test_lru.cc', 'mock_messages.cc', 'mock_backtrace.cc'],
-    cpp_args: '-Wno-pedantic',
+    cpp_args: ['-Wno-pedantic', '-Wno-clobbered'],
     include_directories: ['../src/common', '../dbus_interfaces'],
     dependencies: cutter_dep,
     link_with: lru_lib
@@ -75,7 +75,7 @@ test('LRU Cache Implementation',
 lru_upnp_tests = shared_module('test_lru_upnp',
     ['test_lru_upnp.cc', 'mock_dbus_upnp_helpers.cc',
      'mock_upnp_dleynaserver_dbus.cc', 'mock_messages.cc', 'mock_backtrace.cc'],
-    cpp_args: '-Wno-pedantic',
+    cpp_args: ['-Wno-pedantic', '-Wno-clobbered'],
     include_directories: ['../src/common', '../src/dlna', '../dbus_interfaces'],
     dependencies: [cutter_dep, glib_deps],
     link_with: [lru_lib, upnp_list_lib]

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -19,22 +19,33 @@
 # MA  02110-1301, USA.
 #
 
-mounta_dbus_src = gnome.gdbus_codegen('de_tahifi_mounta',
-    sources: '../../dbus_interfaces/de_tahifi_mounta.xml',
-    interface_prefix: 'de.tahifi.',
-    namespace: 'tdbus')
-mounta_dbus_lib = static_library('mounta_dbus',
-    mounta_dbus_src,
-    include_directories: '../common',
-    dependencies: glib_deps, c_args: relaxed_dbus_warnings)
-mounta_dbus_dep = declare_dependency(link_with: mounta_dbus_lib)
-dbus_docs += custom_target('de_tahifi_mounta_docs',
-    input: '../../dbus_interfaces/de_tahifi_mounta.xml',
-    output: ['@BASENAME@-doc.md', '@BASENAME@-doc.h'],
-    command: [
-        extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
-        '-c', 'tdbus', '-s', 'de.tahifi.', '-n', 'T+A Automounter'
-    ])
+dbus_iface_data = [
+    ['de_tahifi_mounta', 'de.tahifi.', 'tdbus', 'T+A Automounter'],
+]
+
+dbus_usb_deps = []
+
+foreach d : dbus_iface_data
+    dbus_usb_deps += declare_dependency(
+        link_with: static_library(
+            d[0].split('_')[-1] + '_dbus',
+            gnome.gdbus_codegen(d[0],
+                                sources: dbus_iface_dir / d[0] + '.xml',
+                                interface_prefix: d[1],
+                                namespace: d[2]),
+            dependencies: [glib_deps, config_h],
+            c_args: relaxed_dbus_warnings),
+        include_directories: dbus_iface_defs_includes
+    )
+
+    dbus_docs += custom_target(d[0] + '_docs',
+        input: dbus_iface_dir / d[0] + '.xml',
+        output: ['@BASENAME@-doc.md', '@BASENAME@-doc.h'],
+        command: [
+            extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
+            '-c', d[2], '-s', d[1], '-n', d[3]
+        ])
+endforeach
 
 usb_list_lib = static_library('usb_list',
     ['usb_list.cc', 'usb_listtree.cc'],
@@ -71,10 +82,8 @@ executable(
     dependencies: [
         glib_deps,
         dependency('curlpp'),
-        artcache_dbus_dep,
-        debug_dbus_dep,
-        lists_dbus_dep,
-        mounta_dbus_dep,
+        dbus_common_deps,
+        dbus_usb_deps,
         config_h,
     ],
     link_with: [
@@ -83,6 +92,7 @@ executable(
         dbus_lists_handlers_lib,
         dbus_lists_iface_lib,
         dbus_mounta_handlers_lib,
+        debug_dbus_lib,
         listtree_lib,
         lru_lib,
         md5_lib,
