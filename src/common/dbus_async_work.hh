@@ -22,12 +22,12 @@
 #ifndef DBUS_ASYNC_WORK_HH
 #define DBUS_ASYNC_WORK_HH
 
-#include <memory>
-#include <mutex>
-#include <condition_variable>
-#include <functional>
-
+#include "logged_lock.hh"
 #include "messages.h"
+
+#include <memory>
+#include <functional>
+#include <atomic>
 
 namespace DBusAsync
 {
@@ -64,7 +64,7 @@ class ReplyPathTracker
 
     ReplyPath reply_path_;
 
-    std::condition_variable state_changed_;
+    LoggedLock::ConditionVariable state_changed_;
 
   public:
     ReplyPathTracker(const ReplyPathTracker &) = delete;
@@ -72,9 +72,14 @@ class ReplyPathTracker
     ReplyPathTracker &operator=(const ReplyPathTracker &) = delete;
     ReplyPathTracker &operator=(ReplyPathTracker &&) = default;
 
-    explicit ReplyPathTracker():
+    explicit ReplyPathTracker(unsigned int idx):
         reply_path_(ReplyPath::NONE)
-    {}
+    {
+        LoggedLock::configure(
+            state_changed_,
+            std::string("DBusAsync::ReplyPathTracker-") + std::to_string(idx) + "-cv",
+            MESSAGE_LEVEL_DEBUG);
+    }
 
   private:
     void set_state(ReplyPath target)
@@ -83,13 +88,13 @@ class ReplyPathTracker
         state_changed_.notify_all();
     }
 
-    void synchronize(std::unique_lock<std::mutex> &work_lock, ReplyPath target)
+    void synchronize(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock, ReplyPath target)
     {
         state_changed_.wait(work_lock, [this, target] { return reply_path_ == target; });
     }
 
   public:
-    TakePathResult try_take_fast_path(std::unique_lock<std::mutex> &work_lock)
+    TakePathResult try_take_fast_path(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock)
     {
         switch(reply_path_)
         {
@@ -125,7 +130,7 @@ class ReplyPathTracker
         return TakePathResult::INVALID;
     }
 
-    TakePathResult try_take_slow_path(std::unique_lock<std::mutex> &work_lock)
+    TakePathResult try_take_slow_path(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock)
     {
         switch(reply_path_)
         {
@@ -157,7 +162,7 @@ class ReplyPathTracker
         return TakePathResult::INVALID;
     }
 
-    bool slow_path_cookie_sent_to_client(std::unique_lock<std::mutex> &work_lock)
+    bool slow_path_cookie_sent_to_client(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock)
     {
         switch(reply_path_)
         {
@@ -179,7 +184,7 @@ class ReplyPathTracker
         return false;
     }
 
-    bool slow_path_ready_notified_client(std::unique_lock<std::mutex> &work_lock)
+    bool slow_path_ready_notified_client(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock)
     {
         switch(reply_path_)
         {
@@ -201,7 +206,7 @@ class ReplyPathTracker
         return false;
     }
 
-    void set_scheduled_for_execution(std::unique_lock<std::mutex> &work_lock)
+    void set_scheduled_for_execution(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock)
     {
         switch(reply_path_)
         {
@@ -221,7 +226,7 @@ class ReplyPathTracker
         }
     }
 
-    void set_waiting_for_result(std::unique_lock<std::mutex> &work_lock)
+    void set_waiting_for_result(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock)
     {
         switch(reply_path_)
         {
@@ -266,13 +271,16 @@ class Work
     const std::string &name_;
 
   private:
+    static std::atomic_uint next_free_idx_;
+    unsigned int idx_;
+
     /*! Current work item state. */
     State state_;
 
     ReplyPathTracker reply_path_tracker_;
 
     /*! Called when work has completed (done or canceled). */
-    std::function<void(std::unique_lock<std::mutex> &, bool)> notify_done_fn_;
+    std::function<void(LoggedLock::UniqueLock<LoggedLock::Mutex> &, bool)> notify_done_fn_;
 
     class Times
     {
@@ -301,12 +309,17 @@ class Work
     Times times_;
 
   protected:
-    std::mutex lock_;
+    LoggedLock::Mutex lock_;
 
     explicit Work(const std::string &name):
         name_(name),
-        state_(State::RUNNABLE)
-    {}
+        idx_(next_free_idx_++),
+        state_(State::RUNNABLE),
+        reply_path_tracker_(idx_)
+    {
+        LoggedLock::configure(lock_, "DBusAsync::Work-" + std::to_string(idx_),
+                              MESSAGE_LEVEL_DEBUG);
+    }
 
   public:
     Work(Work &&) = default;
@@ -334,7 +347,7 @@ class Work
     /*!
      * Set callback function to be called when work has finished.
      */
-    void set_done_notification_function(std::function<void(std::unique_lock<std::mutex> &, bool)> &&fn)
+    void set_done_notification_function(std::function<void(LoggedLock::UniqueLock<LoggedLock::Mutex> &, bool)> &&fn)
     {
         notify_done_fn_ = std::move(fn);
         times_.scheduled();
@@ -346,16 +359,16 @@ class Work
 
     template <typename T>
     auto with_reply_path_tracker(
-            const std::function<T(std::unique_lock<std::mutex> &, ReplyPathTracker &)> &fn)
+            const std::function<T(LoggedLock::UniqueLock<LoggedLock::Mutex> &, ReplyPathTracker &)> &fn)
     {
-        std::unique_lock<std::mutex> work_lock(lock_);
+        LoggedLock::UniqueLock<LoggedLock::Mutex> work_lock(lock_);
         return fn(work_lock, reply_path_tracker_);
     }
 
     template <typename T>
     auto with_reply_path_tracker__already_locked(
-            std::unique_lock<std::mutex> &work_lock,
-            const std::function<T(std::unique_lock<std::mutex> &, ReplyPathTracker &)> &fn)
+            LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock,
+            const std::function<T(LoggedLock::UniqueLock<LoggedLock::Mutex> &, ReplyPathTracker &)> &fn)
     {
         return fn(work_lock, reply_path_tracker_);
     }
@@ -374,11 +387,11 @@ class Work
      */
     void run()
     {
-        run(std::unique_lock<std::mutex>(lock_));
+        run(LoggedLock::UniqueLock<LoggedLock::Mutex>(lock_));
     }
 
   protected:
-    void run(std::unique_lock<std::mutex> &&work_lock)
+    void run(LoggedLock::UniqueLock<LoggedLock::Mutex> &&work_lock)
     {
         switch(state_)
         {
@@ -389,6 +402,7 @@ class Work
 
                 work_lock.unlock();
                 const auto success = do_run();
+                LOGGED_LOCK_CONTEXT_HINT;
                 work_lock.lock();
 
                 /* state may have changed in the meantime */
@@ -443,7 +457,8 @@ class Work
      */
     void cancel()
     {
-        std::unique_lock<std::mutex> work_lock(lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        LoggedLock::UniqueLock<LoggedLock::Mutex> work_lock(lock_);
 
         switch(state_)
         {
@@ -494,10 +509,10 @@ class Work
      *
      * Contract: This function must return with \p work_lock locked.
      */
-    virtual void do_cancel(std::unique_lock<std::mutex> &work_lock) = 0;
+    virtual void do_cancel(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock) = 0;
 
   private:
-    void set_work_state(std::unique_lock<std::mutex> &work_lock, State state)
+    void set_work_state(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock, State state)
     {
         if(state == state_)
             return;

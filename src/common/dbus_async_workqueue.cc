@@ -27,12 +27,13 @@
 
 void DBusAsync::WorkQueue::shutdown()
 {
-    std::unique_lock<std::mutex> lock(lock_);
+    LOGGED_LOCK_CONTEXT_HINT;
+    LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(lock_);
 
     is_accepting_work_ = false;
     cancel_all_work();
 
-    lock.unlock();
+    qlock.unlock();
 
     if(thread_.joinable())
         thread_.join();
@@ -40,18 +41,21 @@ void DBusAsync::WorkQueue::shutdown()
 
 void DBusAsync::WorkQueue::clear()
 {
-    std::lock_guard<std::mutex> lock(lock_);
+    LOGGED_LOCK_CONTEXT_HINT;
+    std::lock_guard<LoggedLock::Mutex> qlock(lock_);
     cancel_all_work();
 }
 
 bool DBusAsync::WorkQueue::add_work(std::shared_ptr<Work> &&work,
                                     std::function<void(bool, bool)> &&work_accepted)
 {
-    std::unique_lock<std::mutex> lock(lock_);
+    LOGGED_LOCK_CONTEXT_HINT;
+    LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(lock_);
 
     if(!is_accepting_work_)
         return false;
 
+    LOGGED_LOCK_CONTEXT_HINT;
     work->with_reply_path_tracker<void>(
         [] (auto &work_lock, auto &rpt) { rpt.set_scheduled_for_execution(work_lock); });
 
@@ -79,7 +83,7 @@ bool DBusAsync::WorkQueue::add_work(std::shared_ptr<Work> &&work,
     if(work_accepted != nullptr)
         work_accepted(false, false);
 
-    process_work_item(lock, std::move(work));
+    process_work_item(qlock, std::move(work));
 
     if(work_accepted != nullptr)
         work_accepted(false, true);
@@ -123,15 +127,15 @@ bool DBusAsync::WorkQueue::queue_work(std::shared_ptr<Work> work)
     }
 }
 
-bool DBusAsync::WorkQueue::process_work_item(std::unique_lock<std::mutex> &lock,
+bool DBusAsync::WorkQueue::process_work_item(LoggedLock::UniqueLock<LoggedLock::Mutex> &qlock,
                                              std::shared_ptr<Work> &&work)
 {
     if(work != nullptr)
-        work_finished_.wait(lock,
+        work_finished_.wait(qlock,
             [this, work = std::move(work)] ()
             { return !is_accepting_work_ || work_in_progress_ == work; });
     else
-        work_finished_.wait(lock,
+        work_finished_.wait(qlock,
             [this] ()
             { return !is_accepting_work_ || work_in_progress_ != nullptr; });
 
@@ -147,7 +151,7 @@ bool DBusAsync::WorkQueue::process_work_item(std::unique_lock<std::mutex> &lock,
     switch(work->get_state())
     {
       case Work::State::RUNNABLE:
-        lock.unlock();
+        qlock.unlock();
 
         /*
          * The work item is neither locked nor running at this point. If we are
@@ -159,8 +163,10 @@ bool DBusAsync::WorkQueue::process_work_item(std::unique_lock<std::mutex> &lock,
          * even if very unlikely, occur in practice, and it will be around
          * these lines of code.
          */
+        LOGGED_LOCK_CONTEXT_HINT;
         work->run();
-        lock.lock();
+        LOGGED_LOCK_CONTEXT_HINT;
+        qlock.lock();
         break;
 
       case Work::State::RUNNING:
@@ -212,8 +218,9 @@ void DBusAsync::WorkQueue::cancel_all_work()
 
 void DBusAsync::WorkQueue::worker(WorkQueue *q)
 {
-    std::unique_lock<std::mutex> lock(q->lock_);
+    LOGGED_LOCK_CONTEXT_HINT;
+    LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(q->lock_);
 
-    while(q->process_work_item(lock, nullptr))
+    while(q->process_work_item(qlock, nullptr))
         ;
 }

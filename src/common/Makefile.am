@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2019, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -63,6 +63,7 @@ libdbus_lists_handlers_la_SOURCES = \
     gvariantwrapper.hh gvariantwrapper.cc \
     gerrorwrapper.hh \
     dbus_async_workqueue.hh dbus_async_work.hh \
+    logged_lock.hh \
     urlstring.hh i18nstring.hh ranked_stream_links.hh md5.hh \
     listtree.hh
 libdbus_lists_handlers_la_CFLAGS = $(AM_CFLAGS)
@@ -83,6 +84,7 @@ liblisttree_la_SOURCES = \
     cacheable.hh \
     dbus_async_workqueue.cc dbus_async_workqueue.hh \
     dbus_async_work.cc dbus_async_work.hh \
+    logged_lock.hh \
     listtree.hh idtypes.hh \
     $(DBUS_IFACES)/de_tahifi_lists_context.h
 liblisttree_la_CFLAGS = $(AM_CFLAGS)

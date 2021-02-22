@@ -22,6 +22,12 @@
 #ifndef LISTS_BASE_HH
 #define LISTS_BASE_HH
 
+#include "lru.hh"
+#include "logged_lock.hh"
+#include "messages.h"
+#include "de_tahifi_lists_errors.hh"
+#include "de_tahifi_lists_item_kinds.hh"
+
 #include <string>
 #include <array>
 #include <vector>
@@ -29,15 +35,8 @@
 #include <utility>
 #include <thread>
 #include <deque>
-#include <mutex>
 #include <atomic>
-#include <condition_variable>
 #include <algorithm>
-
-#include "lru.hh"
-#include "messages.h"
-#include "de_tahifi_lists_errors.hh"
-#include "de_tahifi_lists_item_kinds.hh"
 
 template <typename T, uint16_t> class TiledList;
 
@@ -221,8 +220,8 @@ template <typename T, uint16_t tile_size>
 class ListTile_
 {
   private:
-    std::mutex write_lock_;
-    std::condition_variable tile_processed_;
+    LoggedLock::Mutex write_lock_;
+    LoggedLock::ConditionVariable tile_processed_;
     std::atomic<bool> cancel_filling_request_;
 
     std::array<ListItem_<T>, tile_size> items_;
@@ -243,23 +242,28 @@ class ListTile_
         error_(ListError::INTERNAL)
     {
         static_assert(tile_size > 0, "Tile size must be positive");
+        LoggedLock::configure(write_lock_, "ListTile_::write_lock_",
+                              MESSAGE_LEVEL_DEBUG);
+        LoggedLock::configure(tile_processed_, "ListTile_::tile_processed_-cv",
+                              MESSAGE_LEVEL_DEBUG);
     }
 
     ~ListTile_()
     {
         /* in case a thread is still referencing this tile, we need to wait for
          * it to finish */
-        std::lock_guard<std::mutex> lock(write_lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        std::lock_guard<LoggedLock::Mutex> lock(write_lock_);
     }
 
-    std::unique_lock<std::mutex> lock_tile()
+    LoggedLock::UniqueLock<LoggedLock::Mutex> lock_tile()
     {
-        return std::unique_lock<std::mutex>(write_lock_);
+        return LoggedLock::UniqueLock<LoggedLock::Mutex>(write_lock_);
     }
 
-    std::unique_lock<std::mutex> try_lock_tile()
+    LoggedLock::UniqueLock<LoggedLock::Mutex> try_lock_tile()
     {
-        return std::unique_lock<std::mutex>(write_lock_, std::try_to_lock);
+        return LoggedLock::UniqueLock<LoggedLock::Mutex>(write_lock_, std::try_to_lock);
     }
 
     bool is_tile_for(ID::Item idx) const
@@ -295,6 +299,7 @@ class ListTile_
      */
     bool is_free() const
     {
+        LOGGED_LOCK_CONTEXT_HINT;
         auto lock(const_cast<ListTile_ *>(this)->try_lock_tile());
 
         return lock.owns_lock() && state_ == ListTileState::FREE;
@@ -397,6 +402,7 @@ class ListTile_
      */
     void wait_for_ready_state(const char *const exception_text)
     {
+        LOGGED_LOCK_CONTEXT_HINT;
         auto lock(lock_tile());
 
         tile_processed_.wait(lock,
@@ -626,14 +632,20 @@ class ListThreads
 
     struct WorkQueue
     {
-        std::mutex lock_;
-        std::condition_variable work_available_;
+        LoggedLock::Mutex lock_;
+        LoggedLock::ConditionVariable work_available_;
         std::deque<Work> work_;
         std::atomic<bool> shutdown_request_;
 
         constexpr explicit WorkQueue():
             shutdown_request_(false)
-        {}
+        {
+            LoggedLock::configure(lock_, "ListThreads::WorkQueue::lock_",
+                                  MESSAGE_LEVEL_DEBUG);
+            LoggedLock::configure(work_available_,
+                                  "ListThreads::WorkQueue::work_available_-cv",
+                                  MESSAGE_LEVEL_DEBUG);
+        }
     };
 
     WorkQueue work_queue_;
@@ -690,7 +702,8 @@ class ListThreads
         while(1)
         {
             {
-                std::lock_guard<std::mutex> qlock(work_queue_.lock_);
+                LOGGED_LOCK_CONTEXT_HINT;
+                std::lock_guard<LoggedLock::Mutex> qlock(work_queue_.lock_);
 
                 if(work_queue_.work_.empty())
                     return;
@@ -721,7 +734,8 @@ class ListThreads
             return 0;
 
         {
-            std::lock_guard<std::mutex> lock(work_queue_.lock_);
+            LOGGED_LOCK_CONTEXT_HINT;
+            std::lock_guard<LoggedLock::Mutex> lock(work_queue_.lock_);
             work_queue_.work_available_.notify_all();
         }
 
@@ -741,7 +755,8 @@ class ListThreads
         log_assert(!threads_.empty());
         log_assert(tile.get_state() == ListTileState::FILLING);
 
-        std::lock_guard<std::mutex> lock(work_queue_.lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        std::lock_guard<LoggedLock::Mutex> lock(work_queue_.lock_);
         work_queue_.work_.emplace_back(tile, filler, list_id);
         work_queue_.work_available_.notify_one();
     }
@@ -754,7 +769,8 @@ class ListThreads
      */
     void cancel_all_queued_fillers()
     {
-        std::unique_lock<std::mutex> qlock(work_queue_.lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(work_queue_.lock_);
 
         for(auto &work : work_queue_.work_)
         {
@@ -807,7 +823,8 @@ class ListThreads
         tile.cancel();
 
         /* in the meantime, check if the tile is still in the queue */
-        std::unique_lock<std::mutex> qlock(work_queue_.lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(work_queue_.lock_);
         auto tlock(tile.try_lock_tile());
 
         if(tlock.owns_lock())
@@ -836,6 +853,8 @@ class ListThreads
             /* there must be thread working on this tile, so wait for it stop
              * doing it; no need to hold the queue lock anymore */
             qlock.unlock();
+
+            LOGGED_LOCK_CONTEXT_HINT;
             auto temp(tile.lock_tile());
         }
 
@@ -859,10 +878,12 @@ class ListThreads
      */
     static void worker(WorkQueue *queue)
     {
-        std::unique_lock<std::mutex> qlock(queue->lock_, std::defer_lock);
+        LOGGED_LOCK_CONTEXT_HINT;
+        LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(queue->lock_, std::defer_lock);
 
         while(1)
         {
+            LOGGED_LOCK_CONTEXT_HINT;
             qlock.lock();
 
             queue->work_available_.wait(qlock,
@@ -879,6 +900,7 @@ class ListThreads
             const Work work_item(queue->work_.front());
             queue->work_.pop_front();
 
+            LOGGED_LOCK_CONTEXT_HINT;
             auto tlock(work_item.tile_->lock_tile());
 
             qlock.unlock();

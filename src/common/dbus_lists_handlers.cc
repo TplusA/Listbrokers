@@ -99,7 +99,7 @@ class NavListsWorkBase: public DBusAsync::Work
 class CookieJar
 {
   private:
-    std::mutex lock_;
+    LoggedLock::Mutex lock_;
     std::atomic<uint32_t> next_free_cookie_;
     std::unordered_map<uint32_t, std::shared_ptr<NavListsWorkBase>> work_by_cookie_;
 
@@ -111,7 +111,9 @@ class CookieJar
 
     explicit CookieJar():
         next_free_cookie_(1)
-    {}
+    {
+        LoggedLock::configure(lock_, "CookieJar", MESSAGE_LEVEL_DEBUG);
+    }
 
     enum class DataAvailableNotificationMode
     {
@@ -151,12 +153,13 @@ class CookieJar
     uint32_t pick_cookie_for_work(std::shared_ptr<NavListsWorkBase> &&work,
                                   DataAvailableNotificationMode mode)
     {
-        std::lock_guard<std::mutex> jar_lock(lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        std::lock_guard<LoggedLock::Mutex> jar_lock(lock_);
 
         const auto cookie = bake_cookie();
         work->set_done_notification_function(
             [this, cookie, mode]
-            (std::unique_lock<std::mutex> &work_lock, bool has_completed)
+            (LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock, bool has_completed)
             { work_done_notification(work_lock, cookie, mode, has_completed); });
         work_by_cookie_.emplace(cookie, std::move(work));
 
@@ -178,7 +181,8 @@ class CookieJar
         std::shared_ptr<NavListsWorkBase> w;
 
         {
-            std::lock_guard<std::mutex> lock(lock_);
+            LOGGED_LOCK_CONTEXT_HINT;
+            std::lock_guard<LoggedLock::Mutex> jar_lock(lock_);
 
             auto it(work_by_cookie_.find(cookie));
             if(it == work_by_cookie_.end())
@@ -256,7 +260,8 @@ class CookieJar
         if(cookie == 0)
             throw BadCookieError("bad value");
 
-        std::unique_lock<std::mutex> jar_lock(lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        LoggedLock::UniqueLock<LoggedLock::Mutex> jar_lock(lock_);
 
         auto work_iter(work_by_cookie_.find(cookie));
         if(work_iter == work_by_cookie_.end())
@@ -284,6 +289,7 @@ class CookieJar
 
             /* we have our result for fast path, so we "eat" our cookie now and
              * remove its associated work item */
+            LOGGED_LOCK_CONTEXT_HINT;
             jar_lock.lock();
             work_by_cookie_.erase(cookie);
             return result;
@@ -294,6 +300,8 @@ class CookieJar
              * work may have just completed in the background; we need to check
              * if taking the slow path is still possible or if we have timed
              * out after the fact */
+
+            LOGGED_LOCK_CONTEXT_HINT;
             const auto take_path_result =
                 static_cast<DBusAsync::Work *>(work.get())->
                     with_reply_path_tracker<DBusAsync::ReplyPathTracker::TakePathResult>(
@@ -306,7 +314,9 @@ class CookieJar
                 {
                     /* work has completed just in this moment and its result is
                      * available, ready for processing on the fast path */
+                    LOGGED_LOCK_CONTEXT_HINT;
                     auto result(work->take_result_from_fast_path());
+                    LOGGED_LOCK_CONTEXT_HINT;
                     jar_lock.lock();
                     work_by_cookie_.erase(cookie);
                     return result;
@@ -347,6 +357,7 @@ class CookieJar
 
             jar_lock.unlock();
 
+            LOGGED_LOCK_CONTEXT_HINT;
             if(!static_cast<DBusAsync::Work *>(work.get())->with_reply_path_tracker<bool>(
                     [] (auto &work_lock, auto &rpt)
                     { return rpt.slow_path_cookie_sent_to_client(work_lock); }))
@@ -356,6 +367,7 @@ class CookieJar
         }
         catch(...)
         {
+            LOGGED_LOCK_CONTEXT_HINT;
             static_cast<DBusAsync::Work *>(work.get())->
                 with_reply_path_tracker<DBusAsync::ReplyPathTracker::TakePathResult>(
                     [] (auto &work_lock, auto &rpt)
@@ -396,11 +408,12 @@ class CookieJar
      *     True if the work has completed successfully, false if the work has
      *     been canceled.
      */
-    void work_done_notification(std::unique_lock<std::mutex> &work_lock,
+    void work_done_notification(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock,
                                 uint32_t cookie, DataAvailableNotificationMode mode,
                                 bool has_completed)
     {
-        std::unique_lock<std::mutex> jar_lock(lock_);
+        LOGGED_LOCK_CONTEXT_HINT;
+        LoggedLock::UniqueLock<LoggedLock::Mutex> jar_lock(lock_);
 
         const auto &work_iter(work_by_cookie_.find(cookie));
 
@@ -578,6 +591,7 @@ class NavListsWork: public NavListsWorkBase
      */
     auto wait_for(const std::chrono::milliseconds &timeout, WaitForMode mode)
     {
+        LOGGED_LOCK_CONTEXT_HINT;
         with_reply_path_tracker<void>(
             [] (auto &work_lock, auto &rpt) { rpt.set_waiting_for_result(work_lock); });
 
@@ -594,7 +608,8 @@ class NavListsWork: public NavListsWorkBase
                 break;
 
             {
-            std::unique_lock<std::mutex> work_lock(lock_);
+            LOGGED_LOCK_CONTEXT_HINT;
+            LoggedLock::UniqueLock<LoggedLock::Mutex> work_lock(lock_);
 
             switch(get_state())
             {
@@ -636,7 +651,7 @@ class NavListsWork: public NavListsWorkBase
     }
 
   protected:
-    void do_cancel(std::unique_lock<std::mutex> &work_lock) final override
+    void do_cancel(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock) final override
     {
         if(cancellation_requested_)
         {

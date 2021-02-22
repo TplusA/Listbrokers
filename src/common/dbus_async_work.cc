@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -28,6 +28,8 @@
 #include <sstream>
 
 #define WITH_COLORS 0
+
+std::atomic_uint DBusAsync::Work::next_free_idx_;
 
 template <typename T>
 static inline auto us(const T &diff)

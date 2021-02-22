@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -24,7 +24,6 @@
 
 #include "dbus_async_work.hh"
 
-#include <condition_variable>
 #include <thread>
 #include <list>
 
@@ -56,12 +55,12 @@ class WorkQueue
     };
 
   private:
-    std::mutex lock_;
+    LoggedLock::Mutex lock_;
     const Mode mode_;
     const size_t maximum_queue_length_;
 
     std::shared_ptr<Work> work_in_progress_;
-    std::condition_variable work_finished_;
+    LoggedLock::ConditionVariable work_finished_;
     std::list<std::shared_ptr<Work>> queue_;
     bool is_accepting_work_;
 
@@ -76,7 +75,11 @@ class WorkQueue
         maximum_queue_length_(maximum_queue_length),
         is_accepting_work_(true),
         thread_(mode == Mode::ASYNC ? std::thread(worker, this) : std::thread())
-    {}
+    {
+        LoggedLock::configure(lock_, "DBusAsync::WorkQueue", MESSAGE_LEVEL_DEBUG);
+        LoggedLock::configure(work_finished_, "DBusAsync::WorkQueue-cv",
+                              MESSAGE_LEVEL_DEBUG);
+    }
 
     /*!
      * Stop processing work, do not accept further work items.
@@ -187,7 +190,7 @@ class WorkQueue
      * items, if any, are cancelled. The function returns \c false in this
      * case.
      *
-     * \param lock
+     * \param qlock
      *     Must wrap #DBusAsync::WorkQueue::lock_ and must be locked.
      *
      * \param work
@@ -200,7 +203,7 @@ class WorkQueue
      *     True if the work item has been processed, false if the queue is
      *     shutting down.
      */
-    bool process_work_item(std::unique_lock<std::mutex> &lock,
+    bool process_work_item(LoggedLock::UniqueLock<LoggedLock::Mutex> &qlock,
                            std::shared_ptr<Work> &&work);
 
     /*!
