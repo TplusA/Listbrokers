@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019--2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -101,27 +101,7 @@ class CookieJar
   private:
     std::mutex lock_;
     std::atomic<uint32_t> next_free_cookie_;
-
-    class StoredWork
-    {
-      public:
-        std::shared_ptr<NavListsWorkBase> work_;
-        bool is_being_waited_for_;
-        bool timed_out_;
-
-        StoredWork(const StoredWork &) = delete;
-        StoredWork(StoredWork &&) = default;
-        StoredWork &operator=(const StoredWork &) = delete;
-        StoredWork &operator=(StoredWork &&) = default;
-
-        explicit StoredWork(std::shared_ptr<NavListsWorkBase> &&work):
-            work_(std::move(work)),
-            is_being_waited_for_(false),
-            timed_out_(false)
-        {}
-    };
-
-    std::unordered_map<uint32_t, StoredWork> work_by_cookie_;
+    std::unordered_map<uint32_t, std::shared_ptr<NavListsWorkBase>> work_by_cookie_;
 
   public:
     CookieJar(const CookieJar &) = delete;
@@ -171,13 +151,14 @@ class CookieJar
     uint32_t pick_cookie_for_work(std::shared_ptr<NavListsWorkBase> &&work,
                                   DataAvailableNotificationMode mode)
     {
-        std::lock_guard<std::mutex> lock(lock_);
+        std::lock_guard<std::mutex> jar_lock(lock_);
 
         const auto cookie = bake_cookie();
         work->set_done_notification_function(
-            [this, cookie, mode] (bool has_completed)
-            { work_done_notification(cookie, mode, has_completed); });
-        work_by_cookie_.emplace(cookie, StoredWork(std::move(work)));
+            [this, cookie, mode]
+            (std::unique_lock<std::mutex> &work_lock, bool has_completed)
+            { work_done_notification(work_lock, cookie, mode, has_completed); });
+        work_by_cookie_.emplace(cookie, std::move(work));
 
         return cookie;
     }
@@ -208,7 +189,7 @@ class CookieJar
              * object, and (2) erase the work from the container. To avoid a
              * deadlock and to avoid UB, we reference the work item and cancel
              * it with this object unlocked. */
-            w = it->second.work_;
+            w = it->second;
         }
 
         log_assert(w != nullptr);
@@ -275,23 +256,23 @@ class CookieJar
         if(cookie == 0)
             throw BadCookieError("bad value");
 
-        std::unique_lock<std::mutex> lock(lock_);
+        std::unique_lock<std::mutex> jar_lock(lock_);
 
-        auto it(work_by_cookie_.find(cookie));
-        if(it == work_by_cookie_.end())
+        auto work_iter(work_by_cookie_.find(cookie));
+        if(work_iter == work_by_cookie_.end())
             throw BadCookieError("unknown");
 
-        log_assert(it->second.work_ != nullptr);
+        log_assert(work_iter->second != nullptr);
 
-        auto work = std::dynamic_pointer_cast<WorkType>(it->second.work_);
+        /*
+         * IMPORTANT: Do not call any \p WorkType function members while
+         *            holding the cookie jar lock to avoid deadlocks!
+         */
+        auto work = std::dynamic_pointer_cast<WorkType>(work_iter->second);
         if(work == nullptr)
             throw BadCookieError("wrong type");
 
-        /* avoid sending data available notifications in case the notification
-         * mode is #CookieJar::DataAvailableNotificationMode::AFTER_TIMEOUT */
-        it->second.is_being_waited_for_ = true;
-
-        lock.unlock();
+        jar_lock.unlock();
 
         try
         {
@@ -301,38 +282,84 @@ class CookieJar
                                        ? WaitForMode::ALLOW_SYNC_PROCESSING
                                        : WaitForMode::NO_SYNC));
 
-            /* we have our result, so we "eat" our cookie now and remove its
-            * associated work item */
-            lock.lock();
+            /* we have our result for fast path, so we "eat" our cookie now and
+             * remove its associated work item */
+            jar_lock.lock();
             work_by_cookie_.erase(cookie);
             return result;
         }
         catch(const TimeoutError &)
         {
-            /* at this point, before the lock can be acquired, the work may
-             * complete in the background */
-            lock.lock();
+            /* at this point, before the cookie jar lock can be acquired, the
+             * work may have just completed in the background; we need to check
+             * if taking the slow path is still possible or if we have timed
+             * out after the fact */
+            const auto take_path_result =
+                static_cast<DBusAsync::Work *>(work.get())->
+                    with_reply_path_tracker<DBusAsync::ReplyPathTracker::TakePathResult>(
+                        [] (auto &work_lock, auto &rpt)
+                        { return rpt.try_take_slow_path(work_lock); });
 
-            /* we cannot reuse \c it here because the iterator may have been
-             * invalidated in the meantime */
-            auto w(work_by_cookie_.find(cookie));
-            if(w != work_by_cookie_.end())
+            switch(take_path_result)
             {
-                w->second.timed_out_ = true;
-                w->second.is_being_waited_for_ = false;
+              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_FAST_PATH:
+                {
+                    /* work has completed just in this moment and its result is
+                     * available, ready for processing on the fast path */
+                    auto result(work->take_result_from_fast_path());
+                    jar_lock.lock();
+                    work_by_cookie_.erase(cookie);
+                    return result;
+                }
+
+              case DBusAsync::ReplyPathTracker::TakePathResult::TAKEN:
+                /* OK, so we are taking the slow path here and announce the
+                 * cookie to the D-Bus client; the #DBusAsync::ReplyPathTracker
+                 * is taking care of correct ordering so that the done
+                 * notification cannot emit the result before we have announced
+                 * the cookie */
+                break;
+
+              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET:
+                BUG("Requesting slow path due to timeout, but already taking slow path (phase 1)");
+                break;
+
+              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED:
+                BUG("Requesting slow path due to timeout, but already taking slow path (phase 2)");
+                break;
+
+              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED:
+                BUG("Requesting slow path due to timeout, but already taking slow path (phase 3)");
+                break;
+
+              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING:
+                break;
+
+              case DBusAsync::ReplyPathTracker::TakePathResult::INVALID:
+                BUG("Requesting slow path due to timeout, but this is an invalid transition");
+                break;
             }
+
+            jar_lock.lock();
 
             if(on_timeout != nullptr)
                 on_timeout(cookie);
+
+            jar_lock.unlock();
+
+            if(!static_cast<DBusAsync::Work *>(work.get())->with_reply_path_tracker<bool>(
+                    [] (auto &work_lock, auto &rpt)
+                    { return rpt.slow_path_cookie_sent_to_client(work_lock); }))
+                BUG("Bad reply path tracker state");
 
             throw;
         }
         catch(...)
         {
-            auto w(work_by_cookie_.find(cookie));
-            if(w != work_by_cookie_.end())
-                w->second.is_being_waited_for_ = false;
-
+            static_cast<DBusAsync::Work *>(work.get())->
+                with_reply_path_tracker<DBusAsync::ReplyPathTracker::TakePathResult>(
+                    [] (auto &work_lock, auto &rpt)
+                    { return rpt.try_take_fast_path(work_lock); });
             throw;
         }
     }
@@ -354,28 +381,101 @@ class CookieJar
      * context of a worker thread or of the caller which has generated the work
      * item. In general, no assumptions about context of execution must be made
      * here.
+     *
+     * \param work_lock
+     *     Lock for the work notified. It will have been locked by the caller,
+     *     and we are allowed to make use of it where required.
+     *
+     * \param cookie
+     *     Cookie for the work which has been processed.
+     *
+     * \param mode
+     *     How to notify the D-Bus client about completion.
+     *
+     * \param has_completed
+     *     True if the work has completed successfully, false if the work has
+     *     been canceled.
      */
-    void work_done_notification(uint32_t cookie, DataAvailableNotificationMode mode,
+    void work_done_notification(std::unique_lock<std::mutex> &work_lock,
+                                uint32_t cookie, DataAvailableNotificationMode mode,
                                 bool has_completed)
     {
-        std::unique_lock<std::mutex> lock(lock_);
+        std::unique_lock<std::mutex> jar_lock(lock_);
 
-        const auto &w(work_by_cookie_.find(cookie));
+        const auto &work_iter(work_by_cookie_.find(cookie));
 
-        if(w == work_by_cookie_.end())
+        if(work_iter == work_by_cookie_.end())
         {
             /* work has been removed already in #CookieJar::try_eat() */
             return;
         }
 
-        const bool success = w->second.work_->success();
+        /* the work item is known, so the caller will have it locked for us */
+        std::shared_ptr<NavListsWorkBase> work = work_iter->second;
+        const bool success = work->success();
         const auto error = has_completed
-            ? w->second.work_->get_error_code()
+            ? work->get_error_code()
             : ListError::Code::INTERRUPTED;
-        const bool timed_out_at_least_once = w->second.timed_out_;
 
         if(!has_completed)
-            work_by_cookie_.erase(w);
+            work_by_cookie_.erase(work_iter);
+
+        /*
+         * We need to unlock the cookie jar because
+         * #DBusAsync::ReplyPathTracker::try_take_fast_path() may have to wait
+         * for a transition of the work's reply state, and this involves
+         * running work from the cookie jar.
+         *
+         * The code below does not make use of the cookie jar object, so it
+         * will remain UNLOCKED from this point on. It should be safe to lock
+         * the cookie jar again further down the road if required in future
+         * versions of this code.
+         */
+        jar_lock.unlock();
+
+        const DBusAsync::ReplyPathTracker::TakePathResult take_path_result =
+            work->reply_path_tracker__unlocked().try_take_fast_path(work_lock);
+
+        switch(take_path_result)
+        {
+          case DBusAsync::ReplyPathTracker::TakePathResult::TAKEN:
+            /* OK, we are done here; the cookie jar needs to collect the result
+             * and return it the fast way */
+            if(success && mode == DataAvailableNotificationMode::ALWAYS)
+            {
+                /* ...unless, of course, the work is associated with a D-Bus
+                 * function which defines a purely asynchronous interface */
+                break;
+            }
+
+            return;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET:
+            MSG_NOT_IMPLEMENTED();
+            return;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED:
+            /* OK, cookie jar has already handled a timeout and we need to
+             * announce the availability of the pending result for the cookie
+             * now */
+            break;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED:
+            BUG("Requesting fast path for cookie %u due to completion, but already in slow path phase 2, completed %d", cookie, has_completed);
+            return;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING:
+            BUG("Requesting fast path for cookie %u due to completion, but already in slow path phase 3, completed %d", cookie, has_completed);
+            return;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_FAST_PATH:
+            BUG("Requesting fast path for cookie %u due to completion, but already taking fast path, completed %d", cookie, has_completed);
+            return;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::INVALID:
+            BUG("Requesting fast path for cookie %u due to completion, but this is an invalid transition, completed %d", cookie, has_completed);
+            return;
+        }
 
         if(success)
         {
@@ -385,27 +485,17 @@ class CookieJar
                 break;
 
               case DataAvailableNotificationMode::AFTER_TIMEOUT:
-                if(!timed_out_at_least_once)
-                    break;
-
-                if(has_completed && w->second.is_being_waited_for_)
-                {
-                    /* avoid a race condition with CookieJar::try_eat() */
-                    break;
-                }
-
-                /* fall-through */
-
               case DataAvailableNotificationMode::ALWAYS:
-                lock.unlock();
                 notify_data_available(cookie);
+                work->with_reply_path_tracker__already_locked<bool>(
+                    work_lock,
+                    [] (auto &work_lock, auto &rpt)
+                    { return rpt.slow_path_ready_notified_client(work_lock); });
                 break;
             }
         }
         else
         {
-            lock.unlock();
-
             GVariantBuilder b;
             g_variant_builder_init(&b, reinterpret_cast<const GVariantType *>("a(uy)"));
             g_variant_builder_add(&b, "(uy)", cookie, error);
@@ -488,6 +578,9 @@ class NavListsWork: public NavListsWorkBase
      */
     auto wait_for(const std::chrono::milliseconds &timeout, WaitForMode mode)
     {
+        with_reply_path_tracker<void>(
+            [] (auto &work_lock, auto &rpt) { rpt.set_waiting_for_result(work_lock); });
+
         switch(future_.wait_for(timeout))
         {
           case std::future_status::timeout:
@@ -500,23 +593,30 @@ class NavListsWork: public NavListsWorkBase
             if(mode == WaitForMode::NO_SYNC)
                 break;
 
+            {
+            std::unique_lock<std::mutex> work_lock(lock_);
+
             switch(get_state())
             {
               case State::RUNNABLE:
-                run();
+                run(std::move(work_lock));
                 break;
 
               case State::RUNNING:
               case State::CANCELING:
+                work_lock.unlock();
                 break;
 
               case State::DONE:
                 BUG("Work deferred, but marked DONE");
+                work_lock.unlock();
                 break;
 
               case State::CANCELED:
                 BUG("Work deferred, but marked CANCELED");
+                work_lock.unlock();
                 break;
+            }
             }
 
             /* fall-through */
@@ -528,8 +628,15 @@ class NavListsWork: public NavListsWorkBase
         throw TimeoutError();
     }
 
+    auto take_result_from_fast_path()
+    {
+        log_assert(future_.valid());
+        future_.wait();
+        return future_.get();
+    }
+
   protected:
-    void do_cancel(std::unique_lock<std::mutex> &lock) final override
+    void do_cancel(std::unique_lock<std::mutex> &work_lock) final override
     {
         if(cancellation_requested_)
         {

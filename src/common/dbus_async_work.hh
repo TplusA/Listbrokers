@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -24,12 +24,226 @@
 
 #include <memory>
 #include <mutex>
+#include <condition_variable>
 #include <functional>
 
 #include "messages.h"
 
 namespace DBusAsync
 {
+
+class ReplyPathTracker
+{
+  public:
+    enum class TakePathResult
+    {
+        TAKEN,
+        ALREADY_ON_FAST_PATH,
+        ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET,
+        ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED,
+        ALREADY_ON_SLOW_PATH_READY_ANNOUNCED,
+        ALREADY_ON_SLOW_PATH_FETCHING,
+        INVALID,
+    };
+
+  private:
+    /*!
+     * For synchronization of messages sent to D-Bus caller during slow path.
+     */
+    enum class ReplyPath
+    {
+        NONE,
+        SCHEDULED,                /*!< Work scheduled and should be running very soon */
+        WAITING,                  /*!< Scheduled, possibly running, waiting completion or timeout */
+        FAST_PATH,                /*!< Finished on time, reply to be sent via fast path */
+        SLOW_PATH_ENTERED,        /*!< Most probably running, slow path, cookie not announced yet */
+        SLOW_PATH_COOKIE_SENT,    /*!< Almost surely running, slow path cookie was announced */
+        SLOW_PATH_READY_NOTIFIED, /*!< Done, slow path cookie ready notification sent */
+        SLOW_PATH_FETCHING,       /*!< Done, client is fetching the slow path result */
+    };
+
+    ReplyPath reply_path_;
+
+    std::condition_variable state_changed_;
+
+  public:
+    ReplyPathTracker(const ReplyPathTracker &) = delete;
+    ReplyPathTracker(ReplyPathTracker &&) = default;
+    ReplyPathTracker &operator=(const ReplyPathTracker &) = delete;
+    ReplyPathTracker &operator=(ReplyPathTracker &&) = default;
+
+    explicit ReplyPathTracker():
+        reply_path_(ReplyPath::NONE)
+    {}
+
+  private:
+    void set_state(ReplyPath target)
+    {
+        reply_path_ = target;
+        state_changed_.notify_all();
+    }
+
+    void synchronize(std::unique_lock<std::mutex> &work_lock, ReplyPath target)
+    {
+        state_changed_.wait(work_lock, [this, target] { return reply_path_ == target; });
+    }
+
+  public:
+    TakePathResult try_take_fast_path(std::unique_lock<std::mutex> &work_lock)
+    {
+        switch(reply_path_)
+        {
+          case ReplyPath::NONE:
+            BUG("Requesting fast path before execution");
+            break;
+
+          case ReplyPath::SCHEDULED:
+            synchronize(work_lock, ReplyPath::WAITING);
+
+            /* fall-through */
+
+          case ReplyPath::WAITING:
+            set_state(ReplyPath::FAST_PATH);
+            return TakePathResult::TAKEN;
+
+          case ReplyPath::FAST_PATH:
+            return TakePathResult::ALREADY_ON_FAST_PATH;
+
+          case ReplyPath::SLOW_PATH_ENTERED:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET;
+
+          case ReplyPath::SLOW_PATH_COOKIE_SENT:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED;
+
+          case ReplyPath::SLOW_PATH_READY_NOTIFIED:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED;
+
+          case ReplyPath::SLOW_PATH_FETCHING:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING;
+        }
+
+        return TakePathResult::INVALID;
+    }
+
+    TakePathResult try_take_slow_path(std::unique_lock<std::mutex> &work_lock)
+    {
+        switch(reply_path_)
+        {
+          case ReplyPath::NONE:
+            BUG("Requesting slow path before execution");
+            break;
+
+          case ReplyPath::SCHEDULED:
+          case ReplyPath::WAITING:
+            set_state(ReplyPath::SLOW_PATH_ENTERED);
+            return TakePathResult::TAKEN;
+
+          case ReplyPath::FAST_PATH:
+            return TakePathResult::ALREADY_ON_FAST_PATH;
+
+          case ReplyPath::SLOW_PATH_ENTERED:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET;
+
+          case ReplyPath::SLOW_PATH_COOKIE_SENT:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED;
+
+          case ReplyPath::SLOW_PATH_READY_NOTIFIED:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED;
+
+          case ReplyPath::SLOW_PATH_FETCHING:
+            return TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING;
+        }
+
+        return TakePathResult::INVALID;
+    }
+
+    bool slow_path_cookie_sent_to_client(std::unique_lock<std::mutex> &work_lock)
+    {
+        switch(reply_path_)
+        {
+          case ReplyPath::SLOW_PATH_ENTERED:
+            set_state(ReplyPath::SLOW_PATH_COOKIE_SENT);
+            return true;
+
+          case ReplyPath::NONE:
+          case ReplyPath::SCHEDULED:
+          case ReplyPath::WAITING:
+          case ReplyPath::FAST_PATH:
+          case ReplyPath::SLOW_PATH_COOKIE_SENT:
+          case ReplyPath::SLOW_PATH_READY_NOTIFIED:
+          case ReplyPath::SLOW_PATH_FETCHING:
+            BUG("Cannot set reply path tracker to slow path phase 2 in state %d", int(reply_path_));
+            break;
+        }
+
+        return false;
+    }
+
+    bool slow_path_ready_notified_client(std::unique_lock<std::mutex> &work_lock)
+    {
+        switch(reply_path_)
+        {
+          case ReplyPath::SLOW_PATH_COOKIE_SENT:
+            set_state(ReplyPath::SLOW_PATH_READY_NOTIFIED);
+            return true;
+
+          case ReplyPath::NONE:
+          case ReplyPath::SCHEDULED:
+          case ReplyPath::WAITING:
+          case ReplyPath::FAST_PATH:
+          case ReplyPath::SLOW_PATH_ENTERED:
+          case ReplyPath::SLOW_PATH_READY_NOTIFIED:
+          case ReplyPath::SLOW_PATH_FETCHING:
+            BUG("Shouldn't have notified client about completion in state %d", int(reply_path_));
+            break;
+        }
+
+        return false;
+    }
+
+    void set_scheduled_for_execution(std::unique_lock<std::mutex> &work_lock)
+    {
+        switch(reply_path_)
+        {
+          case ReplyPath::NONE:
+            set_state(ReplyPath::SCHEDULED);
+            break;
+
+          case ReplyPath::SCHEDULED:
+          case ReplyPath::WAITING:
+          case ReplyPath::FAST_PATH:
+          case ReplyPath::SLOW_PATH_ENTERED:
+          case ReplyPath::SLOW_PATH_COOKIE_SENT:
+          case ReplyPath::SLOW_PATH_READY_NOTIFIED:
+          case ReplyPath::SLOW_PATH_FETCHING:
+            BUG("Cannot set reply path tracker to scheduled state in state %d", int(reply_path_));
+            break;
+        }
+    }
+
+    void set_waiting_for_result(std::unique_lock<std::mutex> &work_lock)
+    {
+        switch(reply_path_)
+        {
+          case ReplyPath::SCHEDULED:
+            set_state(ReplyPath::WAITING);
+            break;
+
+          case ReplyPath::SLOW_PATH_READY_NOTIFIED:
+            set_state(ReplyPath::SLOW_PATH_FETCHING);
+            break;
+
+          case ReplyPath::NONE:
+          case ReplyPath::WAITING:
+          case ReplyPath::FAST_PATH:
+          case ReplyPath::SLOW_PATH_ENTERED:
+          case ReplyPath::SLOW_PATH_COOKIE_SENT:
+          case ReplyPath::SLOW_PATH_FETCHING:
+            BUG("Cannot set reply path tracker to waiting state in state %d", int(reply_path_));
+            break;
+        }
+    }
+};
 
 /*!
  * Base class for D-Bus work meant to be passed to a work queue.
@@ -55,8 +269,10 @@ class Work
     /*! Current work item state. */
     State state_;
 
+    ReplyPathTracker reply_path_tracker_;
+
     /*! Called when work has completed (done or canceled). */
-    std::function<void(bool)> notify_done_fn_;
+    std::function<void(std::unique_lock<std::mutex> &, bool)> notify_done_fn_;
 
     class Times
     {
@@ -118,13 +334,31 @@ class Work
     /*!
      * Set callback function to be called when work has finished.
      */
-    void set_done_notification_function(std::function<void(bool)> &&fn)
+    void set_done_notification_function(std::function<void(std::unique_lock<std::mutex> &, bool)> &&fn)
     {
         notify_done_fn_ = std::move(fn);
         times_.scheduled();
     }
 
     State get_state() const { return state_; }
+
+    ReplyPathTracker &reply_path_tracker__unlocked() { return reply_path_tracker_; }
+
+    template <typename T>
+    auto with_reply_path_tracker(
+            const std::function<T(std::unique_lock<std::mutex> &, ReplyPathTracker &)> &fn)
+    {
+        std::unique_lock<std::mutex> work_lock(lock_);
+        return fn(work_lock, reply_path_tracker_);
+    }
+
+    template <typename T>
+    auto with_reply_path_tracker__already_locked(
+            std::unique_lock<std::mutex> &work_lock,
+            const std::function<T(std::unique_lock<std::mutex> &, ReplyPathTracker &)> &fn)
+    {
+        return fn(work_lock, reply_path_tracker_);
+    }
 
     /*!
      * Run prepared work, synchronously.
@@ -140,37 +374,41 @@ class Work
      */
     void run()
     {
-        std::unique_lock<std::mutex> lock(lock_);
+        run(std::unique_lock<std::mutex>(lock_));
+    }
 
+  protected:
+    void run(std::unique_lock<std::mutex> &&work_lock)
+    {
         switch(state_)
         {
           case State::RUNNABLE:
             {
-                set_work_state(State::RUNNING);
+                set_work_state(work_lock, State::RUNNING);
                 times_.started();
 
-                lock.unlock();
+                work_lock.unlock();
                 const auto success = do_run();
-                lock.lock();
+                work_lock.lock();
 
                 /* state may have changed in the meantime */
                 switch(state_)
                 {
                   case State::RUNNING:
                     /* state hasn't changed, so we are done here */
-                    set_work_state(success ? State::DONE : State::CANCELED);
+                    set_work_state(work_lock, success ? State::DONE : State::CANCELED);
                     break;
 
                   case State::CANCELING:
                     /* fix up for the case that #DBusAsync::Work::do_run() has
                      * completed successfully, but the work item has been
                      * canceled in the meantime */
-                    set_work_state(State::CANCELED);
+                    set_work_state(work_lock, State::CANCELED);
                     break;
 
                   case State::RUNNABLE:
                     MSG_UNREACHABLE();
-                    set_work_state(State::CANCELED);
+                    set_work_state(work_lock, State::CANCELED);
                     break;
 
                   case State::DONE:
@@ -194,6 +432,7 @@ class Work
         BUG("Run async work in state %u", static_cast<unsigned int>(state_));
     }
 
+  public:
     /*!
      * Cancel work in progress.
      *
@@ -204,7 +443,7 @@ class Work
      */
     void cancel()
     {
-        std::unique_lock<std::mutex> lock(lock_);
+        std::unique_lock<std::mutex> work_lock(lock_);
 
         switch(state_)
         {
@@ -212,13 +451,13 @@ class Work
             return;
 
           case State::RUNNABLE:
-            set_work_state(State::CANCELED);
+            set_work_state(work_lock, State::CANCELED);
             times_.finished();
             return;
 
           case State::RUNNING:
-            set_work_state(State::CANCELING);
-            do_cancel(lock);
+            set_work_state(work_lock, State::CANCELING);
+            do_cancel(work_lock);
             return;
 
           case State::DONE:
@@ -244,7 +483,7 @@ class Work
     /*!
      * Initiate cancellation of the work in progress.
      *
-     * Called with #DBusAsync::Work::lock_ locked. The \p lock parameter
+     * Called with #DBusAsync::Work::lock_ locked. The \p work_lock parameter
      * references that lock.
      *
      * Contract: Implementations must return with the object state set to
@@ -253,12 +492,12 @@ class Work
      *     cancellation is not possible), or #DBusAsync::Work::State::DONE (in
      *     case of cancellation after successful completion).
      *
-     * Contract: This function must return with \p lock locked.
+     * Contract: This function must return with \p work_lock locked.
      */
-    virtual void do_cancel(std::unique_lock<std::mutex> &lock) = 0;
+    virtual void do_cancel(std::unique_lock<std::mutex> &work_lock) = 0;
 
   private:
-    void set_work_state(State state)
+    void set_work_state(std::unique_lock<std::mutex> &work_lock, State state)
     {
         if(state == state_)
             return;
@@ -292,11 +531,11 @@ class Work
             switch(state_)
             {
               case State::DONE:
-                notify_done_fn_(true);
+                notify_done_fn_(work_lock, true);
                 break;
 
               case State::CANCELED:
-                notify_done_fn_(false);
+                notify_done_fn_(work_lock, false);
                 break;
 
               case State::RUNNABLE:

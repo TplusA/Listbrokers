@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -51,6 +51,9 @@ bool DBusAsync::WorkQueue::add_work(std::shared_ptr<Work> &&work,
 
     if(!is_accepting_work_)
         return false;
+
+    work->with_reply_path_tracker<void>(
+        [] (auto &work_lock, auto &rpt) { rpt.set_scheduled_for_execution(work_lock); });
 
     switch(mode_)
     {
@@ -145,6 +148,17 @@ bool DBusAsync::WorkQueue::process_work_item(std::unique_lock<std::mutex> &lock,
     {
       case Work::State::RUNNABLE:
         lock.unlock();
+
+        /*
+         * The work item is neither locked nor running at this point. If we are
+         * preempted and halted for a long enough time here, then the work will
+         * have had no chance of starting to run, and we will end up in a
+         * timeout with the work state still stuck at #Work::State::RUNNABLE.
+         *
+         * Not a problem, but it is worth pointing out that this situation may,
+         * even if very unlikely, occur in practice, and it will be around
+         * these lines of code.
+         */
         work->run();
         lock.lock();
         break;
