@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -20,7 +20,7 @@
 #
 
 project('Listbrokers (free)', ['cpp', 'c'],
-    version: '5.1',
+    version: '5.2',
     default_options: ['warning_level=3', 'cpp_std=c++14', 'buildtype=plain'])
 
 config_data = configuration_data()

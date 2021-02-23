@@ -1,3 +1,15 @@
+2021-02-23  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.2 released.
+
+	* dbus: Fix various race conditions in RNF calls.
+
+	* Logging: Use LoggedLock wrapper classes for all locks and condition
+	  variables.
+
+	* Logging: Install handler for uncaught exceptions so that these can
+	  be logged.
+
 2020-11-23  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.1 released.
@@ -65,4 +77,4 @@
 	  can now be distributed under the terms of the GPL 3.
 
 
-Copyright 2015--2020 T+A elektroakustik GmbH & Co. KG
+Copyright 2015--2021 T+A elektroakustik GmbH & Co. KG
