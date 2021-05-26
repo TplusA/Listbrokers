@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -133,10 +133,11 @@ static bool fill_list_from_mounta_data(USB::DeviceList &dev_list,
 
         uint16_t id;
         const char *devname;
+        const char *uuid;
         const char *rootpath;
         const char *usb_port;
 
-        g_variant_get(tuple, "(q&s&s&s)", &id, &devname, &rootpath, &usb_port);
+        g_variant_get(tuple, "(q&s&s&s&s)", &id, &devname, &uuid, &rootpath, &usb_port);
 
         if(dev_list.add_to_list(id, devname, usb_port))
             list_changed = true;
@@ -155,8 +156,9 @@ static bool fill_list_from_mounta_data(USB::DeviceList &dev_list,
         const char *label;
         const char *mountpoint;
         uint16_t device_id;
+        const char *uuid;
 
-        g_variant_get(tuple, "(u&s&sq)", &number, &label, &mountpoint, &device_id);
+        g_variant_get(tuple, "(u&s&sq&s)", &number, &label, &mountpoint, &device_id, &uuid);
 
         if(device_id == 0)
             BUG("Received zero device ID for volume %u \"%s\" "

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -55,11 +55,12 @@ void DBusMounTA::signal_handler(GDBusProxy *proxy, const gchar *sender_name,
     {
         uint16_t device_id;
         const char *devname;
+        const char *uuid;
         const char *rootpath;
         const char *usb_port;
 
-        g_variant_get(parameters, "(q&s&s&s)",
-                      &device_id, &devname, &rootpath, &usb_port);
+        g_variant_get(parameters, "(q&s&s&s&s)",
+                      &device_id, &devname, &uuid, &rootpath, &usb_port);
 
         auto dev_list = data->usb_list_tree_.get_list_of_usb_devices();
 
@@ -75,8 +76,10 @@ void DBusMounTA::signal_handler(GDBusProxy *proxy, const gchar *sender_name,
         const char *label;
         const char *mountpoint;
         uint16_t device_id;
+        const char *uuid;
 
-        g_variant_get(parameters, "(u&s&sq)", &number, &label, &mountpoint, &device_id);
+        g_variant_get(parameters, "(u&s&sq&s)",
+                      &number, &label, &mountpoint, &device_id, &uuid);
 
         auto dev_list = data->usb_list_tree_.get_list_of_usb_devices();
         auto *referenced_device = dev_list->get_device_by_id(device_id);
