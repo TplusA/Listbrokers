@@ -41,9 +41,10 @@ void DBusMounTA::signal_handler(GDBusProxy *proxy, const gchar *sender_name,
     if(strcmp(signal_name, "DeviceRemoved") == 0)
     {
         uint16_t device_id;
+        const char *device_uuid;
         const char *rootpath;
 
-        g_variant_get(parameters, "(q&s)", &device_id, &rootpath);
+        g_variant_get(parameters, "(q&s&s)", &device_id, &device_uuid, &rootpath);
 
         auto dev_list = data->usb_list_tree_.get_list_of_usb_devices();
 
@@ -96,6 +97,10 @@ void DBusMounTA::signal_handler(GDBusProxy *proxy, const gchar *sender_name,
                 data->usb_list_tree_.reinsert_volume_list(device_id, number,
                                                           added_at_index);
         }
+    }
+    else if(strcmp(signal_name, "DeviceWillBeRemoved") == 0)
+    {
+        /* ignored */
     }
     else
         dbus_common_unknown_signal(iface_name, signal_name, sender_name);
