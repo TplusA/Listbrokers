@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -756,7 +756,7 @@ void LRU::Cache::self_check() const
     size_t number_of_pinned_objects = 0;
     size_t number_of_children = 0;
 
-    for(const auto it : all_objects_)
+    for(const auto &it : all_objects_)
     {
         const std::shared_ptr<LRU::Entry> obj = it.second;
 
