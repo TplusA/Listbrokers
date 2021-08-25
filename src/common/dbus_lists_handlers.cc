@@ -502,8 +502,8 @@ class CookieJar
                 notify_data_available(cookie);
                 work->with_reply_path_tracker__already_locked<bool>(
                     work_lock,
-                    [] (auto &work_lock, auto &rpt)
-                    { return rpt.slow_path_ready_notified_client(work_lock); });
+                    [] (auto &wlock, auto &rpt)
+                    { return rpt.slow_path_ready_notified_client(wlock); });
                 break;
             }
         }
