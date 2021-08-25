@@ -41,6 +41,7 @@ noinst_LTLIBRARIES = \
     libmd5.la \
     liblists_dbus.la \
     libartcache_dbus.la \
+    liberrors_dbus.la \
     libdebug_dbus.la \
     libinifile.la
 
@@ -104,6 +105,10 @@ liblists_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 nodist_libartcache_dbus_la_SOURCES = de_tahifi_artcache.c de_tahifi_artcache.h
 libartcache_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
+liberrors_dbus_la_SOURCES = dbus_error_messages.cc dbus_error_messages.hh
+nodist_liberrors_dbus_la_SOURCES = de_tahifi_errors.c de_tahifi_errors.h
+liberrors_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
+
 libdebug_dbus_la_SOURCES = \
     dbus_debug_levels.cc dbus_debug_levels.hh \
     gerrorwrapper.hh \
@@ -124,6 +129,10 @@ BUILT_SOURCES = \
     de_tahifi_artcache-doc.h \
     de_tahifi_artcache-doc.md \
     de_tahifi_artcache.stamp \
+    $(nodist_liberrors_dbus_la_SOURCES) \
+    de_tahifi_errors-doc.h \
+    de_tahifi_errors-doc.md \
+    de_tahifi_errors.stamp \
     $(nodist_libdebug_dbus_la_SOURCES) \
     de_tahifi_debug-doc.h \
     de_tahifi_debug-doc.md \
@@ -147,6 +156,15 @@ de_tahifi_artcache.h: de_tahifi_artcache.stamp
 de_tahifi_artcache.stamp: $(DBUS_IFACES)/de_tahifi_artcache.xml
 	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_artcache --c-namespace tdbus_artcache --interface-prefix de.tahifi.ArtCache. $<
 	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_artcache-doc.md -H de_tahifi_artcache-doc.h -c tdbus_artcache -s de.tahifi.ArtCache. -n "$(PACKAGE_NAME) (cover art)"
+	touch $@
+
+de_tahifi_errors-doc.h: de_tahifi_errors.stamp
+de_tahifi_errors-doc.md: de_tahifi_errors.stamp
+de_tahifi_errors.c: de_tahifi_errors.stamp
+de_tahifi_errors.h: de_tahifi_errors.stamp
+de_tahifi_errors.stamp: $(DBUS_IFACES)/de_tahifi_errors.xml
+	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_errors --c-namespace tdbus --interface-prefix de.tahifi. $<
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_errors-doc.md -H de_tahifi_errors-doc.h -c tdbus -s de.tahifi.. -n "$(PACKAGE_NAME) (cover art)"
 	touch $@
 
 de_tahifi_debug-doc.h: de_tahifi_debug.stamp

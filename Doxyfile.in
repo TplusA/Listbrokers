@@ -789,11 +789,13 @@ RECURSIVE              = YES
 
 EXCLUDE                = \
     @abs_builddir@/src/common/de_tahifi_artcache.c \
+    @abs_builddir@/src/common/de_tahifi_errors.c \
     @abs_builddir@/src/common/de_tahifi_debug.c \
     @abs_builddir@/src/common/de_tahifi_lists.c \
     @abs_builddir@/src/usb/de_tahifi_mounta.c \
     @abs_builddir@/src/dlna/com_intel_dleynaserver.c \
-    @abs_builddir@/src/dlna/org_gnome_upnp.c
+    @abs_builddir@/src/dlna/org_gnome_upnp.c \
+    @abs_srcdir@/dbus_interfaces/*.xml
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

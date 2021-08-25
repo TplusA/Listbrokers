@@ -91,6 +91,7 @@ executable(
         dbus_artcache_iface_lib,
         dbus_lists_handlers_lib,
         dbus_lists_iface_lib,
+        dbus_error_messages_lib,
         dbus_mounta_handlers_lib,
         debug_dbus_lib,
         listtree_lib,

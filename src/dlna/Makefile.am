@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2021  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -89,6 +89,7 @@ strbo_lb_upnp_LDADD = \
     ../common/libdbus_lists_handlers.la \
     ../common/liblisttree.la \
     ../common/libdebug_dbus.la \
+    ../common/liberrors_dbus.la \
     ../common/liblists_dbus.la \
     ../common/libdbus_lists_iface.la \
     ../common/libdbus_artcache_iface.la \

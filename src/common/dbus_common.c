@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -30,7 +30,7 @@
 #include "messages.h"
 
 static size_t number_of_registered_submodules;
-static struct dbus_register_submodule_t registered_submodules[5];
+static struct dbus_register_submodule_t registered_submodules[6];
 
 void dbus_common_register_submodule(const struct dbus_register_submodule_t *submodule)
 {

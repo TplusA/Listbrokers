@@ -36,6 +36,7 @@ dbus_iface_data = [
     ['de_tahifi_lists',    'de.tahifi.Lists.',    'tdbus_lists',    'Content Browsing'],
     ['de_tahifi_artcache', 'de.tahifi.ArtCache.', 'tdbus_artcache', 'Cover Art'],
     ['de_tahifi_debug',    'de.tahifi.Debug.',    'tdbus_debug',    'Debug Levels'],
+    ['de_tahifi_errors',   'de.tahifi.',          'tdbus',          'Error Messages'],
 ]
 
 dbus_common_deps = []
@@ -94,6 +95,11 @@ dbus_lists_handlers_lib = static_library('dbus_lists_handlers',
 
 debug_dbus_lib = static_library('debug_dbus_more',
     ['dbus_debug_levels.cc', 'messages_dbus.c'],
+    dependencies: [glib_deps, dbus_common_deps],
+)
+
+dbus_error_messages_lib = static_library('dbus_errors_iface',
+    ['dbus_error_messages.cc'],
     dependencies: [glib_deps, dbus_common_deps],
 )
 

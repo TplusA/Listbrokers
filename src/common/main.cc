@@ -28,6 +28,7 @@
 #include "main.hh"
 #include "dbus_artcache_iface.hh"
 #include "dbus_debug_levels.hh"
+#include "dbus_error_messages.hh"
 #include "dbus_common.h"
 
 static Timebase real_timebase;
@@ -66,6 +67,7 @@ static int initialize_dbus(DBusData &dbd, ListTreeData &ltd, GMainLoop *loop)
         return -1;
 
     DBusDebugLevels::dbus_setup(true, dbd.dbus_object_path_);
+    DBusErrorMessages::dbus_setup(true, dbd.dbus_object_path_);
     DBusArtCache::dbus_setup(true);
     DBusNavlists::dbus_setup(true, dbd.dbus_object_path_, dbd.get_navlists_iface_data());
     LBApp::dbus_setup(dbd);
