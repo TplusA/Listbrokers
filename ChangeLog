@@ -1,3 +1,10 @@
+2021-09-10  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.5 released.
+
+	* dbus: Report list of supported credential types for each music
+	  service (interface change required for Airable list broker).
+
 2021-08-25  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.4 released.
