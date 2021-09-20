@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019--2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -96,6 +96,80 @@ static ListError fill_list_item_from_upnp_data(UPnP::ItemData &&list_item,
 
     msg_error(ENOMSG, LOG_NOTICE,
               "Malformed or incomplete DLNA child container information");
+
+    return ListError(ListError::PROTOCOL);
+}
+
+static ListError io_error_to_list_error(const GErrorWrapper &gerror)
+{
+    if(gerror->domain == G_IO_ERROR)
+    {
+        switch(GIOErrorEnum(gerror->code))
+        {
+          case G_IO_ERROR_FAILED:
+          case G_IO_ERROR_EXISTS:
+          case G_IO_ERROR_IS_DIRECTORY:
+          case G_IO_ERROR_NOT_DIRECTORY:
+          case G_IO_ERROR_NOT_EMPTY:
+          case G_IO_ERROR_NOT_REGULAR_FILE:
+          case G_IO_ERROR_NOT_SYMBOLIC_LINK:
+          case G_IO_ERROR_NOT_MOUNTABLE_FILE:
+          case G_IO_ERROR_FILENAME_TOO_LONG:
+          case G_IO_ERROR_INVALID_FILENAME:
+          case G_IO_ERROR_TOO_MANY_LINKS:
+          case G_IO_ERROR_NO_SPACE:
+          case G_IO_ERROR_INVALID_ARGUMENT:
+          case G_IO_ERROR_NOT_MOUNTED:
+          case G_IO_ERROR_ALREADY_MOUNTED:
+          case G_IO_ERROR_CLOSED:
+          case G_IO_ERROR_READ_ONLY:
+          case G_IO_ERROR_CANT_CREATE_BACKUP:
+          case G_IO_ERROR_WRONG_ETAG:
+          case G_IO_ERROR_TIMED_OUT:
+          case G_IO_ERROR_WOULD_RECURSE:
+          case G_IO_ERROR_WOULD_MERGE:
+          case G_IO_ERROR_FAILED_HANDLED:
+          case G_IO_ERROR_TOO_MANY_OPEN_FILES:
+          case G_IO_ERROR_NOT_INITIALIZED:
+          case G_IO_ERROR_ADDRESS_IN_USE:
+          case G_IO_ERROR_PARTIAL_INPUT:
+          case G_IO_ERROR_INVALID_DATA:
+          case G_IO_ERROR_DBUS_ERROR:
+          case G_IO_ERROR_BROKEN_PIPE:
+          case G_IO_ERROR_NOT_CONNECTED:
+#if GLIB_CHECK_VERSION(2, 48, 0)
+          case G_IO_ERROR_MESSAGE_TOO_LARGE:
+#endif /*  */
+            return ListError(ListError::PROTOCOL);
+
+          case G_IO_ERROR_NOT_FOUND:
+            return ListError(ListError::EMPTY);
+
+          case G_IO_ERROR_PERMISSION_DENIED:
+          case G_IO_ERROR_CONNECTION_REFUSED:
+          case G_IO_ERROR_PROXY_AUTH_FAILED:
+          case G_IO_ERROR_PROXY_NEED_AUTH:
+          case G_IO_ERROR_PROXY_NOT_ALLOWED:
+            return ListError(ListError::PERMISSION_DENIED);
+
+          case G_IO_ERROR_NOT_SUPPORTED:
+            return ListError(ListError::NOT_SUPPORTED);
+
+          case G_IO_ERROR_CANCELLED:
+            return ListError(ListError::INTERRUPTED);
+
+          case G_IO_ERROR_PENDING:
+          case G_IO_ERROR_BUSY:
+          case G_IO_ERROR_WOULD_BLOCK:
+            return ListError(ListError::BUSY_3000);
+
+          case G_IO_ERROR_HOST_NOT_FOUND:
+          case G_IO_ERROR_HOST_UNREACHABLE:
+          case G_IO_ERROR_NETWORK_UNREACHABLE:
+          case G_IO_ERROR_PROXY_FAILED:
+            return ListError(ListError::NET_IO);
+        }
+    }
 
     return ListError(ListError::PROTOCOL);
 }
@@ -204,7 +278,7 @@ ssize_t UPnP::DBusUPnPFiller::fill(ItemProvider<UPnP::ItemData> &item_provider,
                            ? "Get list of UPnP children (sorted)"
                            : "Get list of UPnP children (unsorted)");
         retval = -1;
-        error = ListError::NET_IO;
+        error = io_error_to_list_error(gerror);
     }
 
     g_object_unref(proxy);

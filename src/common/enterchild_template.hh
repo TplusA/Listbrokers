@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2021  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -112,21 +112,31 @@ ID::List enter_child_template(ContainingListType *const this_ptr,
         return ID::List();
     }
 
-    ChildListItemType &child_entry = (*this_ptr)[item];
-    const auto cached_child_id = child_entry.get_child_list();
-
-    if(use_cached(cached_child_id))
+    try
     {
-        log_assert(cached_child_id.is_valid());
-        return cached_child_id;
-    }
+        ChildListItemType &child_entry = (*this_ptr)[item];
+        const auto cached_child_id = child_entry.get_child_list();
 
-    return purge_list(cached_child_id, add_to_cache(child_entry),
-                      [&child_entry, &error] (ID::List old_id, ID::List new_id)
-                      {
-                          if(new_id.is_valid() || error != ListError::INVALID_ID)
-                              child_entry.set_child_list(new_id);
-                      });
+        if(use_cached(cached_child_id))
+        {
+            log_assert(cached_child_id.is_valid());
+            return cached_child_id;
+        }
+
+        return purge_list(cached_child_id, add_to_cache(child_entry),
+                          [&child_entry, &error] (ID::List old_id, ID::List new_id)
+                          {
+                              if(new_id.is_valid() || error != ListError::INVALID_ID)
+                                  child_entry.set_child_list(new_id);
+                          });
+    }
+    catch(const ListIterException &e)
+    {
+        msg_error(0, LOG_NOTICE,
+                  "Cannot enter child item %u: %s", item.get_raw_id(), e.what());
+        error = e.get_list_error();
+        return ID::List();
+    }
 }
 
 }
