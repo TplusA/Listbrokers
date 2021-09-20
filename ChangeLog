@@ -1,3 +1,10 @@
+2021-09-20  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.6 released.
+
+	* UPnP: Avoid crash when encountering bad lists caused by errors while
+	  filling them from UPnP.
+
 2021-09-10  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.5 released.
