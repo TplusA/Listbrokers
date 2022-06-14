@@ -1,3 +1,9 @@
+2022-06-14  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.7 released.
+
+	* Misc: Fix crash on exit.
+
 2021-09-20  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.6 released.
@@ -104,4 +110,4 @@
 	  can now be distributed under the terms of the GPL 3.
 
 
-Copyright 2015--2021 T+A elektroakustik GmbH & Co. KG
+Copyright 2015--2022 T+A elektroakustik GmbH & Co. KG
