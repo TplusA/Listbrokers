@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -44,6 +44,7 @@ class ListTreeData
     virtual ~ListTreeData() {}
 
     virtual ListTreeIface &get_list_tree() const = 0;
+    virtual void shutdown() = 0;
 };
 
 /*!

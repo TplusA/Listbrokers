@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -148,6 +148,7 @@ int main(int argc, char *argv[])
     dbus_common_shutdown(loop);
 
     ltd->get_list_tree().shutdown_threads();
+    ltd->shutdown();
 
     return EXIT_SUCCESS;
 }

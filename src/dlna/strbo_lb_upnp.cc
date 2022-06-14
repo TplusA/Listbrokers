@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -38,13 +38,35 @@ class UPnPListTreeData: public ListTreeData
     std::unique_ptr<UPnP::ListTree> list_tree_;
     std::unique_ptr<Cacheable::CheckNoOverrides> cache_check_;
 
+    static DBusAsync::WorkQueue navlists_get_range_;
+    static DBusAsync::WorkQueue navlists_get_list_id_;
+    static DBusAsync::WorkQueue navlists_get_uris_;
+    static DBusAsync::WorkQueue navlists_realize_location_;
+
     ~UPnPListTreeData() {}
 
     ListTreeIface &get_list_tree() const override
     {
         return *list_tree_;
     }
+
+    void shutdown() final override
+    {
+        navlists_get_range_.shutdown();
+        navlists_get_list_id_.shutdown();
+        navlists_get_uris_.shutdown();
+        navlists_realize_location_.shutdown();
+    }
 };
+
+DBusAsync::WorkQueue
+UPnPListTreeData::navlists_get_range_(DBusAsync::WorkQueue::Mode::ASYNC);
+DBusAsync::WorkQueue
+UPnPListTreeData::navlists_get_list_id_(DBusAsync::WorkQueue::Mode::ASYNC);
+DBusAsync::WorkQueue
+UPnPListTreeData::navlists_get_uris_(DBusAsync::WorkQueue::Mode::ASYNC);
+DBusAsync::WorkQueue
+UPnPListTreeData::navlists_realize_location_(DBusAsync::WorkQueue::Mode::ASYNC);
 
 class UPnPDBusData: public DBusData
 {
@@ -110,15 +132,13 @@ static int create_list_tree_and_cache(UPnPListTreeData &lt, GMainLoop *loop)
 
     UPnP::init_standard_dbus_fillers(*lt.cache_);
 
-    static DBusAsync::WorkQueue navlists_get_range(DBusAsync::WorkQueue::Mode::ASYNC);
-    static DBusAsync::WorkQueue navlists_get_list_id(DBusAsync::WorkQueue::Mode::ASYNC);
-    static DBusAsync::WorkQueue navlists_get_uris(DBusAsync::WorkQueue::Mode::ASYNC);
-    static DBusAsync::WorkQueue navlists_realize_location(DBusAsync::WorkQueue::Mode::ASYNC);
-
     lt.list_tree_ =
-        std::make_unique<UPnP::ListTree>(navlists_get_range, navlists_get_list_id,
-                                         navlists_get_uris, navlists_realize_location,
-                                         *lt.cache_, *lt.cache_check_);
+        std::make_unique<UPnP::ListTree>(
+            UPnPListTreeData::navlists_get_range_,
+            UPnPListTreeData::navlists_get_list_id_,
+            UPnPListTreeData::navlists_get_uris_,
+            UPnPListTreeData::navlists_realize_location_,
+            *lt.cache_, *lt.cache_check_);
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("UPnP list tree");
 
