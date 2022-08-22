@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2018, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -22,10 +22,13 @@
 #ifndef SERVERS_LOST_AND_FOUND_HH
 #define SERVERS_LOST_AND_FOUND_HH
 
+#include "messages.h"
+
 #include <map>
 #include <deque>
 #include <string>
 #include <algorithm>
+#include <memory>
 
 #include <gio/gio.h>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2018, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017--2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -426,7 +426,7 @@ class Object: public LRU::Entry
         auto it = std::find(children_.begin(), children_.end(), child_id);
         cut_assert_true(it != children_.end());
         cppcut_assert_not_null(child);
-        cppcut_assert_equal(it->get_raw_id(), child->get_cache_id().get_raw_id());;
+        cppcut_assert_equal(it->get_raw_id(), child->get_cache_id().get_raw_id());
         children_.erase(it);
         cppcut_assert_equal(get_number_of_children(), children_.size());
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -375,7 +375,7 @@ ID::List LRU::Cache::insert_again(std::shared_ptr<Entry> &&entry)
 #ifndef NDEBUG
     const auto inserted =
 #endif /* !NDEBUG */
-    all_objects_.insert(std::move(std::make_pair(new_id, std::move(entry))));
+    all_objects_.insert(std::make_pair(new_id, std::move(entry)));
     log_assert(inserted.second);
 
     if(old_id == pinned_object_id_)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -23,6 +23,9 @@
 #define ENTERCHILD_TEMPLATE_HH
 
 #include "enterchild_glue.hh"
+#include "lru.hh"
+#include "lists_base.hh"
+#include "de_tahifi_lists_errors.hh"
 
 namespace EnterChild
 {

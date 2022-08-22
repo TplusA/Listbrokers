@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -76,8 +76,7 @@ void USB::DeviceItemData::fill_volume_list(USB::VolumeList &volumes) const
     for(const auto &it : volumes_)
     {
         ListItem_<VolumeItemData> vol;
-        vol.get_specific_data() =
-            std::move(VolumeItemData(dev_id_, it->number_));
+        vol.get_specific_data() = VolumeItemData(dev_id_, it->number_);
         volumes.append_unsorted(std::move(vol));
     }
 }
@@ -221,8 +220,7 @@ bool USB::DeviceList::add_to_list(uint16_t id, const char *name,
     }
 
     ListItem_<DeviceItemData> new_device;
-    new_device.get_specific_data() =
-        std::move(DeviceItemData(id, name, usb_port));
+    new_device.get_specific_data() = DeviceItemData(id, name, usb_port);
     append_unsorted(std::move(new_device));
 
     return true;
@@ -419,7 +417,7 @@ bool USB::DirList::fill_from_file_system(const std::string &path)
     {
         ListItem_<ItemData> new_item;
         new_item.get_specific_data() =
-            std::move(ItemData(dir, ListItemKind(ListItemKind::DIRECTORY)));
+            ItemData(dir, ListItemKind(ListItemKind::DIRECTORY));
         append_unsorted(std::move(new_item));
     }
 
@@ -427,7 +425,7 @@ bool USB::DirList::fill_from_file_system(const std::string &path)
     {
         ListItem_<ItemData> new_item;
         new_item.get_specific_data() =
-            std::move(ItemData(file, ListItemKind(ListItemKind::REGULAR_FILE)));
+            ItemData(file, ListItemKind(ListItemKind::REGULAR_FILE));
         append_unsorted(std::move(new_item));
     }
 

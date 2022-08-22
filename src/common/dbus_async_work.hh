@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019--2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -68,9 +68,7 @@ class ReplyPathTracker
 
   public:
     ReplyPathTracker(const ReplyPathTracker &) = delete;
-    ReplyPathTracker(ReplyPathTracker &&) = default;
     ReplyPathTracker &operator=(const ReplyPathTracker &) = delete;
-    ReplyPathTracker &operator=(ReplyPathTracker &&) = default;
 
     explicit ReplyPathTracker(unsigned int idx):
         reply_path_(ReplyPath::NONE)
@@ -322,8 +320,8 @@ class Work
     }
 
   public:
-    Work(Work &&) = default;
-    Work &operator=(Work &&) = default;
+    Work(Work &&) = delete;
+    Work &operator=(Work &&) = delete;
 
     virtual ~Work()
     {

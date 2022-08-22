@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -42,7 +42,7 @@ class PeriodicRescan
     PeriodicRescan(const PeriodicRescan &) = delete;
     PeriodicRescan(PeriodicRescan &&) = default;
     PeriodicRescan &operator=(const PeriodicRescan &) = delete;
-    PeriodicRescan &operator=(PeriodicRescan &&) = default;
+    PeriodicRescan &operator=(PeriodicRescan &&) = delete;
 
     explicit PeriodicRescan(unsigned int interval_seconds):
         interval_seconds_(interval_seconds),

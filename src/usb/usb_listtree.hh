@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -134,7 +134,7 @@ class ListTree: public ListTreeIface
         return lt_manager_.use_list(list_id, pin_it);
     }
 
-    std::chrono::seconds force_list_into_cache(ID::List list_id, bool force)
+    std::chrono::seconds force_list_into_cache(ID::List list_id, bool force) final override
     {
         return lt_manager_.force_list_into_cache(list_id, force);
     }

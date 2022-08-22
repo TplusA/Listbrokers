@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -51,7 +51,7 @@ static bool try_set_url_and_apply(const std::string &url, ListError &error,
 
       case Url::Location::SetURLResult::WRONG_SCHEME:
         error = ListError(ListError::NOT_SUPPORTED);
-        return false;;
+        return false;
 
       case Url::Location::SetURLResult::INVALID_CHARACTERS:
       case Url::Location::SetURLResult::PARSING_ERROR:

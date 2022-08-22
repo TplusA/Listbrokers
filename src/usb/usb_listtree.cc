@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -76,8 +76,7 @@ void USB::ListTree::reinsert_volume_list(uint16_t device_id, uint32_t volume_num
      * Anyway, let's patch the volume list and GTFO.
      */
     ListItem_<VolumeItemData> vol;
-    vol.get_specific_data() =
-        std::move(VolumeItemData(device_id, volume_number));
+    vol.get_specific_data() = VolumeItemData(device_id, volume_number);
 
     volume_list->insert_before(added_at_index, std::move(vol));
 
@@ -521,7 +520,7 @@ static ListError follow_path(USB::ListTree &lt, const std::string &path,
                                                   component_end - component_start)
                                     : path.substr(component_start - path.begin()));
 
-        size_t idx = range.first.get_raw_id();;
+        size_t idx = range.first.get_raw_id();
         ListItemKind kind(ListItemKind::LOGOUT_LINK);
         bool found = false;
 
@@ -1028,7 +1027,7 @@ USB::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
         {
             if(!get_component_name<DirList>(*this, lt_manager_, lru_entry,
                     list_id, current_item_id, error, "directory",
-                    [&ref_elements, &item_elements, &elements,
+                    [&ref_elements, &elements,
                      ref_list_id, ref_item_pos, &found_reference_point]
                     (const DirList &list, ID::Item item) -> bool
                     {

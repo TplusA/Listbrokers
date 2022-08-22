@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019--2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019--2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -85,12 +85,12 @@ static ListError fill_list_item_from_upnp_data(UPnP::ItemData &&list_item,
     {
         msg_vinfo(MESSAGE_LEVEL_DIAG,
                   "D-Bus subpath for \"%s\" is \"%s\"", display_name, path);
-        list_item = std::move(UPnP::ItemData(path, display_name,
-                                             std::move(album_art_url != nullptr
-                                                       ? Url::String(Url::Sensitivity::GENERIC,
-                                                                     album_art_url)
-                                                       : Url::String(Url::Sensitivity::GENERIC)),
-                                             is_container));
+        list_item = UPnP::ItemData(path, display_name,
+                                   album_art_url != nullptr
+                                   ? Url::String(Url::Sensitivity::GENERIC,
+                                                 album_art_url)
+                                   : Url::String(Url::Sensitivity::GENERIC),
+                                   is_container);
         return ListError();
     }
 

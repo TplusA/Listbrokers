@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -105,8 +105,8 @@ std::chrono::seconds Cacheable::CheckWithOverrides::put_override(ID::List list_i
     }
 
     auto it(overrides_.emplace(list_id,
-                               std::move(Override(glib_wrapper_, std::move(nodes),
-                                                  [this, list_id] () { expired(list_id); }))));
+                               Override(glib_wrapper_, std::move(nodes),
+                                        [this, list_id] () { expired(list_id); })));
 
     return it.first->second.keep_alive();
 }
@@ -144,7 +144,7 @@ bool Cacheable::CheckWithOverrides::is_cacheable(ID::List list_id) const
 
     if(e == nullptr)
     {
-        BUG("No list in cache for ID %u", list_id.get_raw_id());;
+        BUG("No list in cache for ID %u", list_id.get_raw_id());
         return false;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019--2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019--2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -62,8 +62,8 @@ class NavListsWorkBase: public DBusAsync::Work
     {}
 
   public:
-    NavListsWorkBase(NavListsWorkBase &&) = default;
-    NavListsWorkBase &operator=(NavListsWorkBase &&) = default;
+    NavListsWorkBase(NavListsWorkBase &&) = delete;
+    NavListsWorkBase &operator=(NavListsWorkBase &&) = delete;
     virtual ~NavListsWorkBase() = default;
 
     bool success() const
@@ -105,9 +105,9 @@ class CookieJar
 
   public:
     CookieJar(const CookieJar &) = delete;
-    CookieJar(CookieJar &&) = default;
+    CookieJar(CookieJar &&) = delete;
     CookieJar &operator=(const CookieJar &) = delete;
-    CookieJar &operator=(CookieJar &&) = default;
+    CookieJar &operator=(CookieJar &&) = delete;
 
     explicit CookieJar():
         next_free_cookie_(1)
@@ -854,8 +854,8 @@ class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrap
     const size_t count_;
 
   public:
-    GetRange(GetRange &&) = default;
-    GetRange &operator=(GetRange &&) = default;
+    GetRange(GetRange &&) = delete;
+    GetRange &operator=(GetRange &&) = delete;
 
     explicit GetRange(ListTreeIface &listtree, ID::List list_id,
                       ID::Item first_item_id, size_t count):
@@ -992,8 +992,8 @@ class GetRangeWithMetaData: public NavListsWork<std::tuple<ListError, ID::Item, 
     const size_t count_;
 
   public:
-    GetRangeWithMetaData(GetRangeWithMetaData &&) = default;
-    GetRangeWithMetaData &operator=(GetRangeWithMetaData &&) = default;
+    GetRangeWithMetaData(GetRangeWithMetaData &&) = delete;
+    GetRangeWithMetaData &operator=(GetRangeWithMetaData &&) = delete;
 
     explicit GetRangeWithMetaData(ListTreeIface &listtree, ID::List list_id,
                       ID::Item first_item_id, size_t count):
@@ -1173,8 +1173,8 @@ class GetListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::Strin
     const ID::Item item_id_;
 
   public:
-    GetListID(GetListID &&) = default;
-    GetListID &operator=(GetListID &&) = default;
+    GetListID(GetListID &&) = delete;
+    GetListID &operator=(GetListID &&) = delete;
 
     explicit GetListID(ListTreeIface &listtree,
                        ID::List list_id, ID::Item item_id):
@@ -1305,8 +1305,8 @@ class GetParamListID: public NavListsWork<std::tuple<ListError, ID::List, I18n::
     const std::string parameter_;
 
   public:
-    GetParamListID(GetParamListID &&) = default;
-    GetParamListID &operator=(GetParamListID &&) = default;
+    GetParamListID(GetParamListID &&) = delete;
+    GetParamListID &operator=(GetParamListID &&) = delete;
 
     explicit GetParamListID(ListTreeIface &listtree,
                             ID::List list_id, ID::Item item_id,
@@ -1516,8 +1516,8 @@ class GetURIs: public NavListsWork<std::tuple<ListError, std::vector<Url::String
     const ID::Item item_id_;
 
   public:
-    GetURIs(GetURIs &&) = default;
-    GetURIs &operator=(GetURIs &&) = default;
+    GetURIs(GetURIs &&) = delete;
+    GetURIs &operator=(GetURIs &&) = delete;
 
     explicit GetURIs(ListTreeIface &listtree, ID::List list_id, ID::Item item_id):
         NavListsWork(NAME, listtree),
@@ -1654,8 +1654,8 @@ class GetRankedStreamLinks:
     const ID::Item item_id_;
 
   public:
-    GetRankedStreamLinks(GetRankedStreamLinks &&) = default;
-    GetRankedStreamLinks &operator=(GetRankedStreamLinks &&) = default;
+    GetRankedStreamLinks(GetRankedStreamLinks &&) = delete;
+    GetRankedStreamLinks &operator=(GetRankedStreamLinks &&) = delete;
 
     explicit GetRankedStreamLinks(ListTreeIface &listtree,
                                   ID::List list_id, ID::Item item_id):
@@ -1906,8 +1906,8 @@ class GetLocationTrace:
     const ID::RefPos ref_item_id_;
 
   public:
-    GetLocationTrace(GetLocationTrace &&) = default;
-    GetLocationTrace &operator=(GetLocationTrace &&) = default;
+    GetLocationTrace(GetLocationTrace &&) = delete;
+    GetLocationTrace &operator=(GetLocationTrace &&) = delete;
 
     explicit GetLocationTrace(ListTreeIface &listtree,
                               ID::List list_id, ID::RefPos item_id,
@@ -2033,8 +2033,8 @@ class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::
     const std::string url_;
 
   public:
-    RealizeLocation(RealizeLocation &&) = default;
-    RealizeLocation &operator=(RealizeLocation &&) = default;
+    RealizeLocation(RealizeLocation &&) = delete;
+    RealizeLocation &operator=(RealizeLocation &&) = delete;
 
     explicit RealizeLocation(ListTreeIface &listtree, std::string &&url):
         NavListsWork(NAME, listtree),

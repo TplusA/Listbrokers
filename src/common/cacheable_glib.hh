@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -23,6 +23,8 @@
 #define CACHEABLE_GLIB_HH
 
 #include "cacheable.hh"
+
+#include <glib.h>
 
 namespace Cacheable
 {

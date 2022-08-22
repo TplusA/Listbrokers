@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2015, 2016, 2018, 2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -1151,7 +1152,7 @@ class ListTiles_
                ID::List list_id, ID::Item idx, size_t total_number_of_items,
                ItemLocation tile_to_push_out, ItemLocation tile_to_keep)
     {
-        ListTile_<T, tile_size> *const temp = active_tiles_[size_t(tile_to_push_out)];;
+        ListTile_<T, tile_size> *const temp = active_tiles_[size_t(tile_to_push_out)];
         active_tiles_[size_t(tile_to_push_out)] = active_tiles_[size_t(ItemLocation::CENTER)];
         active_tiles_[size_t(ItemLocation::CENTER)] = active_tiles_[size_t(tile_to_keep)];
         active_tiles_[size_t(tile_to_keep)] = temp;
