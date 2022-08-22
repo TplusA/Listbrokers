@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -40,7 +40,7 @@ namespace ready_probes_tests
 
 void test_simple_probe_is_unready_by_default()
 {
-    Ready::SimpleProbe p;
+    Ready::SimpleProbe p("test");
     cut_assert_false(p.is_ready());
 }
 
@@ -95,8 +95,8 @@ static WatcherExpectations *watcher_expectations;
 void cut_setup()
 {
     watcher_expectations = new WatcherExpectations;
-    probe_1 = new Ready::SimpleProbe;
-    probe_2 = new Ready::SimpleProbe;
+    probe_1 = new Ready::SimpleProbe("probe 1");
+    probe_2 = new Ready::SimpleProbe("probe 2");
     ready = new Ready::Manager({ static_cast<Ready::Probe *>(probe_1), static_cast<Ready::Probe *>(probe_2) });
 
     ready->add_watcher([] (bool ready_state) { watcher(ready_state, watcher_expectations); }, false);

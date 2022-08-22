@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -23,6 +23,7 @@
 #define READYPROBE_HH
 
 #include <atomic>
+#include <string>
 
 /*!
  * \addtogroup ready_state Daemon ready state.
@@ -51,9 +52,13 @@ class Probe
   private:
     ProbeChangedIface *pciface_;
 
+  public:
+    const std::string name_;
+
   protected:
-    explicit Probe():
-        pciface_(nullptr)
+    explicit Probe(std::string &&name):
+        pciface_(nullptr),
+        name_(std::move(name))
     {}
 
   public:
@@ -87,7 +92,8 @@ class SimpleProbe: public Probe
     SimpleProbe(const SimpleProbe &) = delete;
     SimpleProbe &operator=(const SimpleProbe &) = delete;
 
-    explicit SimpleProbe():
+    explicit SimpleProbe(std::string &&name):
+        Probe(std::move(name)),
         is_ready_(false)
     {}
 

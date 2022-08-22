@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "readyprobe.hh"
+#include "messages.h"
 
 /*!
  * \addtogroup ready_state Daemon ready state.
@@ -80,6 +81,13 @@ class Manager: public ProbeChangedIface
     Probe *get_probe(const size_t idx) const
     {
         return idx < probes_.size() ? probes_[idx] : nullptr;
+    }
+
+    void dump() const
+    {
+        for(const auto &p : probes_)
+            msg_info("Probe \"%s\": %sready",
+                     p->name_.c_str(), p->is_ready() ? "" : "not ");
     }
 
   private:
