@@ -24,7 +24,7 @@
 #define LISTS_BASE_HH
 
 #include "lru.hh"
-#include "logged_lock.hh"
+#include "lru_killed_lists.hh"
 #include "messages.h"
 #include "de_tahifi_lists_errors.hh"
 #include "de_tahifi_lists_item_kinds.hh"
@@ -279,11 +279,18 @@ class ListTile_
      *     This function may only be called while holding the tile lock or when
      *     it is known that no worker thread is accessing the tile.
      */
-    void reset(ListError error = ListError(ListError::OK),
+    void reset(LRU::KilledLists &killed_list,
+               ListError error = ListError(ListError::OK),
                ListTileState state = ListTileState::FREE)
     {
         for(size_t i = 0; i < tile_size; ++i)
+        {
+            const auto child_id(items_[i].get_child_list());
+            if(child_id.is_valid())
+                killed_list.killed(child_id);
+
             items_[i].reset();
+        }
 
         base_ = 0;
         stored_items_count_ = 0;
@@ -324,6 +331,9 @@ class ListTile_
      * has finished, but the data that was supposed to be filled in is not
      * available.
      *
+     * \param killed_list
+     *     Object which records lists removed from hot tiles.
+     *
      * \param error
      *     The reason why the tile has not been filled in is passed here. In
      *     case the \p error is #ListError::OK, the tile is set to
@@ -337,9 +347,9 @@ class ListTile_
      *     This function is called with the tile lock held by the calling
      *     thread.
      */
-    void canceled_notification(ListError error)
+    void canceled_notification(LRU::KilledLists &killed_list, ListError error)
     {
-        reset(error,
+        reset(killed_list, error,
               (error == ListError::OK) ? ListTileState::CANCELED : ListTileState::ERROR);
 
         tile_processed_.notify_all();
@@ -768,7 +778,7 @@ class ListThreads
      * This function does not affect tiles that are already processed by some
      * thread. Use #ListThreads::cancel_filler() for this purpose.
      */
-    void cancel_all_queued_fillers()
+    void cancel_all_queued_fillers(LRU::KilledLists &killed_list)
     {
         LOGGED_LOCK_CONTEXT_HINT;
         LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(work_queue_.lock_);
@@ -776,7 +786,7 @@ class ListThreads
         for(auto &work : work_queue_.work_)
         {
             log_assert(work.tile_->get_state() == ListTileState::FILLING);
-            work.tile_->canceled_notification(ListError());
+            work.tile_->canceled_notification(killed_list, ListError());
             log_assert(work.tile_->get_state() == ListTileState::CANCELED);
         }
 
@@ -812,13 +822,16 @@ class ListThreads
      *       tile. Locking is likely going to block, but only until the worker
      *       sees the cancel state (or finishes the tile some other way).
      *
+     * \param killed_list
+     *     Object which records lists removed from hot tiles.
+     *
      * \param tile
      *     The tile that should not be filled anymore. It is an error to call
      *     this function for free tiles.
      *
      * \see #ListTile_::canceled_notification()
      */
-    void cancel_filler(ListTile_<T, tile_size> &tile)
+    void cancel_filler(LRU::KilledLists &killed_list, ListTile_<T, tile_size> &tile)
     {
         /* if a thread is already working on this tile, then let it know */
         tile.cancel();
@@ -847,7 +860,7 @@ class ListThreads
             }
 
             if(tstate != ListTileState::CANCELED)
-                tile.canceled_notification(ListError());
+                tile.canceled_notification(killed_list, ListError());
         }
         else
         {
@@ -939,7 +952,8 @@ class ListThreads
                       "Failed filling tile from list %u, index %u",
                       work_item.list_id_.get_raw_id(),
                       work_item.tile_->get_base());
-            work_item.tile_->canceled_notification(error);
+            work_item.tile_->canceled_notification(LRU::KilledLists::get_singleton(),
+                                                   error);
         }
     }
 };
@@ -1132,6 +1146,9 @@ class ListTiles_
      * \param filler
      *     Object that knows how to fill our list items.
      *
+     * \param killed_list
+     *     Object which records lists removed from hot tiles.
+     *
      * \param list_id
      *     Which list to fill.
      *
@@ -1148,7 +1165,7 @@ class ListTiles_
      *     #ListTiles_::ItemLocation::DOWN. Together, they define the sliding
      *     direction.
      */
-    void slide(const TiledListFillerIface<T> &filler,
+    void slide(const TiledListFillerIface<T> &filler, LRU::KilledLists &killed_list,
                ID::List list_id, ID::Item idx, size_t total_number_of_items,
                ItemLocation tile_to_push_out, ItemLocation tile_to_keep)
     {
@@ -1167,13 +1184,13 @@ class ListTiles_
            if(!temp->is_tile_for(adjacent_index))
            {
                log_assert(!temp->is_free());
-               thread_pool_.cancel_filler(*temp);
+               thread_pool_.cancel_filler(killed_list, *temp);
 
                /* no locking of temp tile required here because the only thread
                 * that has been working on this tile, if any, was told to stop
                 * doing it in #ListThreads::cancel_filler(), and that function
                 * also waited for the thread to release the lock on temp */
-               temp->reset();
+               temp->reset(killed_list);
            }
            else
            {
@@ -1208,28 +1225,28 @@ class ListTiles_
     }
 
     void slide_up(const TiledListFillerIface<T> &filler,
-                  ID::List list_id, ID::Item idx,
+                  LRU::KilledLists &killed_list, ID::List list_id, ID::Item idx,
                   size_t total_number_of_items, const unsigned int steps)
     {
         log_assert(steps > 0);
         log_assert(steps < maximum_number_of_hot_items);
 
         for(unsigned int i = 0; i < steps; ++i)
-            slide(filler, list_id,
+            slide(filler, killed_list, list_id,
                   ID::Item(idx.get_raw_id() + (steps - i - 1) * tile_size),
                   total_number_of_items,
                   ItemLocation::DOWN, ItemLocation::UP);
     }
 
     void slide_down(const TiledListFillerIface<T> &filler,
-                    ID::List list_id, ID::Item idx,
+                    LRU::KilledLists &killed_list, ID::List list_id, ID::Item idx,
                     size_t total_number_of_items, const unsigned int steps)
     {
         log_assert(steps > 0);
         log_assert(steps < maximum_number_of_hot_items);
 
         for(unsigned int i = 0; i < steps; ++i)
-            slide(filler, list_id,
+            slide(filler, killed_list, list_id,
                   ID::Item(idx.get_raw_id() - (steps - i - 1) * tile_size),
                   total_number_of_items,
                   ItemLocation::UP, ItemLocation::DOWN);
@@ -1361,7 +1378,8 @@ class ListTiles_
             {
                 msg_vinfo(MESSAGE_LEVEL_DEBUG,
                           "slide up to index %u", first.get_raw_id());
-                slide_up(filler, list_id, center_index, total_number_of_items,
+                slide_up(filler, LRU::KilledLists::get_singleton(), list_id,
+                         center_index, total_number_of_items,
                          required_number_of_slides);
             }
 
@@ -1376,7 +1394,8 @@ class ListTiles_
             {
                 msg_vinfo(MESSAGE_LEVEL_DEBUG,
                           "slide down to index %u", first.get_raw_id());
-                slide_down(filler, list_id, center_index, total_number_of_items,
+                slide_down(filler, LRU::KilledLists::get_singleton(), list_id,
+                           center_index, total_number_of_items,
                            required_number_of_slides);
             }
 
@@ -1480,14 +1499,16 @@ class ListTiles_
 
     void clear()
     {
-        thread_pool_.cancel_all_queued_fillers();
+        auto &killed_list(LRU::KilledLists::get_singleton());
+
+        thread_pool_.cancel_all_queued_fillers(killed_list);
 
         for(auto &ht : hot_tiles_)
         {
             if(!ht.is_free())
             {
-                thread_pool_.cancel_filler(ht);
-                ht.reset();
+                thread_pool_.cancel_filler(killed_list, ht);
+                ht.reset(killed_list);
             }
         }
 

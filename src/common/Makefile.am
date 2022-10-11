@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2019, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -46,7 +46,7 @@ noinst_LTLIBRARIES = \
     libinifile.la
 
 liblru_la_SOURCES = \
-    lru.cc lru.hh timebase.hh messages.h idtypes.hh \
+    lru.cc lru.hh lru_killed_lists.hh  timebase.hh messages.h idtypes.hh \
     $(DBUS_IFACES)/de_tahifi_lists_context.h
 liblru_la_CFLAGS = $(AM_CFLAGS)
 liblru_la_CXXFLAGS = $(AM_CXXFLAGS)

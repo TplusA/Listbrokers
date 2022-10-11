@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -113,12 +113,16 @@ void cut_setup()
     cache->set_callbacks([]{}, []{}, [] (ID::List id) {}, []{});
     cppcut_assert_equal(size_t(0), cache->count());
 
+    LRU::KilledLists::get_singleton().reset();
+
     UPnP::MediaList::start_threads(1, true);
 }
 
 void cut_teardown()
 {
     UPnP::MediaList::shutdown_threads();
+
+    cut_assert_false(LRU::KilledLists::get_singleton().reset());
 
     delete cache;
     cache = nullptr;
@@ -930,6 +934,8 @@ void test_get_dbus_object_paths_of_sublists()
     auto root_directory = std::static_pointer_cast<UPnP::MediaList>(cache->lookup(root_directory_id));
     cppcut_assert_equal(big_media_list.size(), root_directory->size());
 
+    std::vector<ID::List> kill_list;
+
     /* enter sublist at each item in root directory, get D-Bus paths of each
      * sublist */
     for(size_t i = 0; i < big_media_list.size(); ++i)
@@ -986,7 +992,20 @@ void test_get_dbus_object_paths_of_sublists()
         /* get D-Bus path of sublist */
         const std::string path = subdir->get_dbus_object_path();
         cppcut_assert_equal(expected_path, path);
+
+        kill_list.push_back(subdir_id);
     }
+
+    /* clean shutdown */
+    cut_assert_true(cache->toposort_for_purge(kill_list.begin(), kill_list.end()));
+    mock_messages->ignore_messages_above(MESSAGE_LEVEL_NORMAL);
+    for(auto id : kill_list)
+    {
+        char temp[128];
+        snprintf(temp, sizeof(temp), "Purge entry %u", id.get_raw_id());
+        mock_messages->expect_msg_vinfo_formatted(MESSAGE_LEVEL_IMPORTANT, temp);
+    }
+    cache->purge_entries(kill_list.begin(), kill_list.end());
 }
 
 };

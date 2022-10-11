@@ -24,10 +24,60 @@
 #endif /* HAVE_CONFIG_H */
 
 #include "lru.hh"
+#include "lru_killed_lists.hh"
+#include "messages.h"
 
 #include <algorithm>
 #include <unordered_map>
 #include <ostream>
+
+void LRU::KilledLists::killed(ID::List list_id)
+{
+    LOGGED_LOCK_CONTEXT_HINT;
+    std::lock_guard<LoggedLock::Mutex> lock(lock_);
+    killed_.insert(list_id);
+}
+
+bool LRU::KilledLists::erase(ID::List list_id)
+{
+    LOGGED_LOCK_CONTEXT_HINT;
+    std::lock_guard<LoggedLock::Mutex> lock(lock_);
+
+    try
+    {
+        return killed_.erase(list_id) > 0;
+    }
+    catch(const std::exception &e)
+    {
+        BUG("Exception while trying to remove killed ID %u: %s",
+            list_id.get_raw_id(), e.what());
+        return false;
+    }
+}
+
+bool LRU::KilledLists::reset()
+{
+    if(killed_.empty())
+        return false;
+    killed_.clear();
+    return true;
+}
+
+void LRU::KilledLists::dump(const char *fn, int line) const
+{
+    LOGGED_LOCK_CONTEXT_HINT;
+    std::lock_guard<LoggedLock::Mutex> lock(lock_);
+
+    msg_info("Number of killed items [%s(%d)]: %zu", fn, line,  killed_.size());
+    for(auto ki : killed_)
+        msg_info("Killed: %u", ki.get_raw_id());
+}
+
+LRU::KilledLists &LRU::KilledLists::get_singleton()
+{
+    static LRU::KilledLists ki;
+    return ki;
+}
 
 ID::List LRU::CacheIdGenerator::next(LRU::CacheMode cache_mode,
                                      ID::List::context_t ctx)

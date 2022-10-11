@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2017--2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2017--2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -36,6 +36,7 @@
 
 #include "upnp_list.hh"
 #include "servers_lost_and_found.hh"
+#include "lru_killed_lists.hh"
 
 gpointer (*UPnP::ServerItemData::object_ref)(gpointer) = g_object_ref;
 void (*UPnP::ServerItemData::object_unref)(gpointer) = g_object_unref;
@@ -148,7 +149,7 @@ void UPnP::ServerList::obliviate_child(ID::List child_id, const Entry *child)
 
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
-    else
+    else if(!LRU::KilledLists::get_singleton().erase(child_id))
         BUG("Got obliviate notification for server root %u, "
             "but could not find it in server list (ID %u)",
             child_id.get_raw_id(), get_cache_id().get_raw_id());
@@ -361,7 +362,7 @@ void UPnP::MediaList::obliviate_child(ID::List child_id, const Entry *child)
 
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
-    else
+    else if(!LRU::KilledLists::get_singleton().erase(child_id))
         BUG("Got obliviate notification for child %u, "
             "but could not find it in list with ID %u",
             child_id.get_raw_id(), get_cache_id(). get_raw_id());

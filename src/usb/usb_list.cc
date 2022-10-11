@@ -114,7 +114,7 @@ void USB::DeviceList::obliviate_child(ID::List child_id, const Entry *child)
 
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
-    else
+    else if(!LRU::KilledLists::get_singleton().erase(child_id))
         BUG("Got obliviate notification for USB device %u, "
             "but could not find it in device list (ID %u)",
             child_id.get_raw_id(), get_cache_id().get_raw_id());
@@ -318,7 +318,7 @@ void USB::VolumeList::obliviate_child(ID::List child_id, const Entry *child)
 
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
-    else
+    else if(!LRU::KilledLists::get_singleton().erase(child_id))
         BUG("Got obliviate notification for USB volume %u, "
             "but could not find it in volume list (ID %u)",
             child_id.get_raw_id(), get_cache_id().get_raw_id());
@@ -342,7 +342,7 @@ void USB::DirList::obliviate_child(ID::List child_id, const Entry *child)
 
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
-    else
+    else if(!LRU::KilledLists::get_singleton().erase(child_id))
         BUG("Got obliviate notification for child %u, "
             "but could not find it in list (ID %u)",
             child_id.get_raw_id(), get_cache_id().get_raw_id());
