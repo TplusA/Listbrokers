@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -276,7 +276,6 @@ class TiledList: public LRU::Entry, public GenericList<T>
   private:
     size_t number_of_entries_;
     ListTiles_<T, tile_size> tiles_;
-    static ListThreads<T, tile_size> thread_pool;
 
   protected:
     const TiledListFillerIface<T> &filler_;
@@ -290,7 +289,7 @@ class TiledList: public LRU::Entry, public GenericList<T>
                        const TiledListFillerIface<T> &filler):
         LRU::Entry(parent),
         number_of_entries_(number_of_entries),
-        tiles_(thread_pool),
+        tiles_(get_thread_pool()),
         filler_(filler)
     {
         static_assert(tile_size > 0, "Tile size must be positive");
@@ -305,15 +304,15 @@ class TiledList: public LRU::Entry, public GenericList<T>
                               bool synchronous_mode)
     {
         if(synchronous_mode)
-            thread_pool.set_synchronized();
+            get_thread_pool().set_synchronized();
 
-        thread_pool.start(number_of_threads);
+        get_thread_pool().start(number_of_threads);
     }
 
     /*!
      * Stop networking threads for this type of list.
      */
-    static void shutdown_threads() { thread_pool.shutdown(); }
+    static void shutdown_threads() { get_thread_pool().shutdown(); }
 
     /*!
      * Wait until all queued work has been processed.
@@ -324,8 +323,9 @@ class TiledList: public LRU::Entry, public GenericList<T>
      */
     static void sync_threads()
     {
-        thread_pool.wait_empty();
-        thread_pool.start(thread_pool.shutdown());
+        auto &tp(get_thread_pool());
+        tp.wait_empty();
+        tp.start(tp.shutdown());
     }
 
     /*!
@@ -352,6 +352,8 @@ class TiledList: public LRU::Entry, public GenericList<T>
     }
 
   private:
+    static ListThreads<T, tile_size> &get_thread_pool();
+
     /*!
      * Explicit request to load tiles surrounding the given item.
      *

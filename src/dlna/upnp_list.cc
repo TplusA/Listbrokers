@@ -42,8 +42,12 @@ gpointer (*UPnP::ServerItemData::object_ref)(gpointer) = g_object_ref;
 void (*UPnP::ServerItemData::object_unref)(gpointer) = g_object_unref;
 
 template<>
-ListThreads<UPnP::ItemData, UPnP::media_list_tile_size>
-TiledList<UPnP::ItemData, UPnP::media_list_tile_size>::thread_pool(false);
+ListThreads<UPnP::ItemData, UPnP::media_list_tile_size> &
+TiledList<UPnP::ItemData, UPnP::media_list_tile_size>::get_thread_pool()
+{
+    static ListThreads<UPnP::ItemData, UPnP::media_list_tile_size> thread_pool(false);
+    return thread_pool;
+}
 
 void UPnP::ServerItemData::init(tdbusdleynaserverMediaDevice *dbus_proxy)
 {
