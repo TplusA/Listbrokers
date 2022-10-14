@@ -1,3 +1,11 @@
+2022-10-14  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.9 released.
+
+	* Misc: Avoid false BUG messages on list removal.
+
+	* Misc: Fix warning thrown by clang.
+
 2022-09-15  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.8 released.
