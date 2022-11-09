@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2018, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -44,7 +44,7 @@ void DBusUPnP::dleynaserver_manager_signal(
     if(strcmp(signal_name, "FoundServer") == 0)
     {
         GVariant *val = g_variant_get_child_value(parameters, 0);
-        log_assert(val != NULL);
+        msg_log_assert(val != NULL);
 
         const gchar *str = g_variant_get_string(val, NULL);
         msg_info("New server %s", str);
@@ -60,7 +60,7 @@ void DBusUPnP::dleynaserver_manager_signal(
     else if(strcmp(signal_name, "LostServer") == 0)
     {
         GVariant *val = g_variant_get_child_value(parameters, 0);
-        log_assert(val != NULL);
+        msg_log_assert(val != NULL);
 
         const gchar *str = g_variant_get_string(val, NULL);
         msg_info("Bye-bye server %s", str);

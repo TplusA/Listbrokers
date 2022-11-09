@@ -196,7 +196,7 @@ class CookieJar
             w = it->second;
         }
 
-        log_assert(w != nullptr);
+        msg_log_assert(w != nullptr);
         w->cancel();
     }
 
@@ -267,7 +267,7 @@ class CookieJar
         if(work_iter == work_by_cookie_.end())
             throw BadCookieError("unknown");
 
-        log_assert(work_iter->second != nullptr);
+        msg_log_assert(work_iter->second != nullptr);
 
         /*
          * IMPORTANT: Do not call any \p WorkType function members while
@@ -331,22 +331,22 @@ class CookieJar
                 break;
 
               case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET:
-                BUG("Requesting slow path due to timeout, but already taking slow path (phase 1)");
+                MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 1)");
                 break;
 
               case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED:
-                BUG("Requesting slow path due to timeout, but already taking slow path (phase 2)");
+                MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 2)");
                 break;
 
               case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED:
-                BUG("Requesting slow path due to timeout, but already taking slow path (phase 3)");
+                MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 3)");
                 break;
 
               case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING:
                 break;
 
               case DBusAsync::ReplyPathTracker::TakePathResult::INVALID:
-                BUG("Requesting slow path due to timeout, but this is an invalid transition");
+                MSG_BUG("Requesting slow path due to timeout, but this is an invalid transition");
                 break;
             }
 
@@ -361,7 +361,7 @@ class CookieJar
             if(!static_cast<DBusAsync::Work *>(work.get())->with_reply_path_tracker<bool>(
                     [] (auto &work_lock, auto &rpt)
                     { return rpt.slow_path_cookie_sent_to_client(work_lock); }))
-                BUG("Bad reply path tracker state");
+                MSG_BUG("Bad reply path tracker state");
 
             throw;
         }
@@ -474,19 +474,19 @@ class CookieJar
             break;
 
           case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED:
-            BUG("Requesting fast path for cookie %u due to completion, but already in slow path phase 2, completed %d", cookie, has_completed);
+            MSG_BUG("Requesting fast path for cookie %u due to completion, but already in slow path phase 2, completed %d", cookie, has_completed);
             return;
 
           case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING:
-            BUG("Requesting fast path for cookie %u due to completion, but already in slow path phase 3, completed %d", cookie, has_completed);
+            MSG_BUG("Requesting fast path for cookie %u due to completion, but already in slow path phase 3, completed %d", cookie, has_completed);
             return;
 
           case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_FAST_PATH:
-            BUG("Requesting fast path for cookie %u due to completion, but already taking fast path, completed %d", cookie, has_completed);
+            MSG_BUG("Requesting fast path for cookie %u due to completion, but already taking fast path, completed %d", cookie, has_completed);
             return;
 
           case DBusAsync::ReplyPathTracker::TakePathResult::INVALID:
-            BUG("Requesting fast path for cookie %u due to completion, but this is an invalid transition, completed %d", cookie, has_completed);
+            MSG_BUG("Requesting fast path for cookie %u due to completion, but this is an invalid transition, completed %d", cookie, has_completed);
             return;
         }
 
@@ -623,12 +623,12 @@ class NavListsWork: public NavListsWorkBase
                 break;
 
               case State::DONE:
-                BUG("Work deferred, but marked DONE");
+                MSG_BUG("Work deferred, but marked DONE");
                 work_lock.unlock();
                 break;
 
               case State::CANCELED:
-                BUG("Work deferred, but marked CANCELED");
+                MSG_BUG("Work deferred, but marked CANCELED");
                 work_lock.unlock();
                 break;
             }
@@ -645,7 +645,7 @@ class NavListsWork: public NavListsWorkBase
 
     auto take_result_from_fast_path()
     {
-        log_assert(future_.valid());
+        msg_log_assert(future_.valid());
         future_.wait();
         return future_.get();
     }
@@ -655,7 +655,7 @@ class NavListsWork: public NavListsWorkBase
     {
         if(cancellation_requested_)
         {
-            BUG("Multiple cancellation requests");
+            MSG_BUG("Multiple cancellation requests");
             return;
         }
 
@@ -722,14 +722,14 @@ static inline void try_fast_path(
     }
     catch(const std::exception &e)
     {
-        BUG("Unexpected failure (%d)", __LINE__);
+        MSG_BUG("Unexpected failure (%d)", __LINE__);
         g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
                                               G_DBUS_ERROR_INVALID_ARGS,
                                               "Internal error (%s)", e.what());
     }
     catch(...)
     {
-        BUG("Unexpected failure (%d)", __LINE__);
+        MSG_BUG("Unexpected failure (%d)", __LINE__);
         g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
                                               G_DBUS_ERROR_INVALID_ARGS,
                                               "Internal error (*unknown*)");
@@ -788,14 +788,14 @@ static inline void finish_slow_path(
     }
     catch(const std::exception &e)
     {
-        BUG("Unexpected failure (%d)", __LINE__);
+        MSG_BUG("Unexpected failure (%d)", __LINE__);
         g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
                                               G_DBUS_ERROR_INVALID_ARGS,
                                               "Internal error (%s)", e.what());
     }
     catch(...)
     {
-        BUG("Unexpected failure (%d)", __LINE__);
+        MSG_BUG("Unexpected failure (%d)", __LINE__);
         g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR,
                                               G_DBUS_ERROR_INVALID_ARGS,
                                               "Internal error (*unknown*)");
@@ -864,7 +864,7 @@ class GetRange: public NavListsWork<std::tuple<ListError, ID::Item, GVariantWrap
         first_item_id_(first_item_id),
         count_(count)
     {
-        log_assert(list_id_.is_valid());
+        msg_log_assert(list_id_.is_valid());
     }
 
     static void fast_path_failure(tdbuslistsNavigation *object,
@@ -1002,7 +1002,7 @@ class GetRangeWithMetaData: public NavListsWork<std::tuple<ListError, ID::Item, 
         first_item_id_(first_item_id),
         count_(count)
     {
-        log_assert(list_id_.is_valid());
+        msg_log_assert(list_id_.is_valid());
     }
 
     static void fast_path_failure(tdbuslistsNavigation *object,
@@ -1524,7 +1524,7 @@ class GetURIs: public NavListsWork<std::tuple<ListError, std::vector<Url::String
         list_id_(list_id),
         item_id_(item_id)
     {
-        log_assert(list_id_.is_valid());
+        msg_log_assert(list_id_.is_valid());
     }
 
     static void fast_path_failure(tdbuslistsNavigation *object,
@@ -1663,7 +1663,7 @@ class GetRankedStreamLinks:
         list_id_(list_id),
         item_id_(item_id)
     {
-        log_assert(list_id_.is_valid());
+        msg_log_assert(list_id_.is_valid());
     }
 
     static void fast_path_failure(tdbuslistsNavigation *object,
@@ -1918,7 +1918,7 @@ class GetLocationTrace:
         ref_list_id_(ref_list_id),
         ref_item_id_(ref_item_id)
     {
-        log_assert(list_id_.is_valid());
+        msg_log_assert(list_id_.is_valid());
     }
 
     static void fast_path_failure(tdbuslistsNavigation *object,
@@ -2040,7 +2040,7 @@ class RealizeLocation: public NavListsWork<std::tuple<ListError, ListTreeIface::
         NavListsWork(NAME, listtree),
         url_(std::move(url))
     {
-        log_assert(!url_.empty());
+        msg_log_assert(!url_.empty());
     }
 
     static void fast_path_failure(tdbuslistsNavigation *object,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -34,7 +34,7 @@ constexpr const char UPnP::ListTree::CONTEXT_ID[];
 void UPnP::ListTree::add_to_server_list(const std::vector<std::string> &list)
 {
     auto server_list = lt_manager_.lookup_list<UPnP::ServerList>(server_list_id_);
-    log_assert(server_list != nullptr);
+    msg_log_assert(server_list != nullptr);
 
     for(auto &server_object_name : list)
         server_list->add_to_list(server_object_name,
@@ -44,7 +44,7 @@ void UPnP::ListTree::add_to_server_list(const std::vector<std::string> &list)
 void UPnP::ListTree::remove_from_server_list(const std::vector<std::string> &list)
 {
     auto server_list = lt_manager_.lookup_list<UPnP::ServerList>(server_list_id_);
-    log_assert(server_list != nullptr);
+    msg_log_assert(server_list != nullptr);
 
     use_list(server_list_id_, false);
 
@@ -86,7 +86,7 @@ void UPnP::ListTree::remove_from_server_list(const std::vector<std::string> &lis
 
           case ListTreeManager::PurgeResult::REPLACED_ROOT:
           case ListTreeManager::PurgeResult::PURGED_AND_REPLACED:
-            BUG("%s(%d): unreachable", __func__, __LINE__);
+            MSG_UNREACHABLE();
             break;
 
           case ListTreeManager::PurgeResult::INVALID:
@@ -105,7 +105,7 @@ void UPnP::ListTree::remove_from_server_list(const std::vector<std::string> &lis
 void UPnP::ListTree::clear()
 {
     auto server_list = lt_manager_.lookup_list<UPnP::ServerList>(server_list_id_);
-    log_assert(server_list != nullptr);
+    msg_log_assert(server_list != nullptr);
 
     std::vector<std::string> list;
     std::transform(
@@ -263,8 +263,8 @@ ID::List UPnP::ListTree::get_parent_link(ID::List list_id, ID::Item &parent_item
     if(ok)
         return parent->get_cache_id();
 
-    BUG("Failed to find item in list %u linking to child list %u",
-        parent->get_cache_id().get_raw_id(), list_id.get_raw_id());
+    MSG_BUG("Failed to find item in list %u linking to child list %u",
+            parent->get_cache_id().get_raw_id(), list_id.get_raw_id());
 
     return ID::List();
 }
@@ -291,8 +291,8 @@ UPnP::ListTree::get_server_item(const UPnP::MediaList &list) const
 
         if(e == nullptr)
         {
-            BUG("No UPnP server for list %u, cache corrupt",
-                list.get_cache_id().get_raw_id());
+            MSG_BUG("No UPnP server for list %u, cache corrupt",
+                    list.get_cache_id().get_raw_id());
             return nullptr;
         }
     }
@@ -302,8 +302,8 @@ UPnP::ListTree::get_server_item(const UPnP::MediaList &list) const
 
     if(!static_cast<const UPnP::ServerList *>(e)->lookup_item_id_by_child_id(child_list_id, item_idx))
     {
-        BUG("UPnP server for list %u not found",
-            list.get_cache_id().get_raw_id());
+        MSG_BUG("UPnP server for list %u not found",
+                list.get_cache_id().get_raw_id());
         return nullptr;
     }
 
@@ -379,14 +379,14 @@ ListError UPnP::ListTree::get_uris_for_item(ID::List list_id, ID::Item item_id,
 
 bool UPnP::ListTree::can_handle_strbo_url(const std::string &url) const
 {
-    BUG("%s(): not implemented", __PRETTY_FUNCTION__);
+    MSG_BUG("%s(): not implemented", __PRETTY_FUNCTION__);
     return false;
 }
 
 ListError UPnP::ListTree::realize_strbo_url(const std::string &url,
                                             ListTreeIface::RealizeURLResult &result)
 {
-    BUG("%s(): not implemented", __PRETTY_FUNCTION__);
+    MSG_BUG("%s(): not implemented", __PRETTY_FUNCTION__);
     return ListError(ListError::INTERNAL);
 }
 
@@ -394,7 +394,7 @@ std::unique_ptr<Url::Location>
 UPnP::ListTree::get_location_key(ID::List list_id, ID::RefPos item_pos,
                                  bool as_reference_key, ListError &error) const
 {
-    BUG("%s(): not implemented", __PRETTY_FUNCTION__);
+    MSG_BUG("%s(): not implemented", __PRETTY_FUNCTION__);
     return nullptr;
 }
 
@@ -403,6 +403,6 @@ UPnP::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
                                    ID::List ref_list_id, ID::RefPos ref_item_pos,
                                    ListError &error) const
 {
-    BUG("%s(): not implemented", __PRETTY_FUNCTION__);
+    MSG_BUG("%s(): not implemented", __PRETTY_FUNCTION__);
     return nullptr;
 }

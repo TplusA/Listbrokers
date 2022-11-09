@@ -62,8 +62,8 @@ bool USB::DeviceItemData::add_volume(uint32_t vol_id,
     else
     {
         if(bug_if_dupe)
-            BUG("Tried to add existing volume %u \"%s\" to device %u",
-                vol_id, display_name_utf8, dev_id_);
+            MSG_BUG("Tried to add existing volume %u \"%s\" to device %u",
+                    vol_id, display_name_utf8, dev_id_);
 
         added_at_index = SIZE_MAX;
 
@@ -94,8 +94,8 @@ USB::DeviceItemData::lookup_existing_volume_info(uint32_t volume_number) const
                              return a->number_ < b->number_;
                          });
 
-    log_assert(it != volumes_.end());
-    log_assert((*it) != nullptr);
+    msg_log_assert(it != volumes_.end());
+    msg_log_assert((*it) != nullptr);
 
     return *(*it);
 }
@@ -105,7 +105,7 @@ const I18n::String USB::DeviceList::LIST_TITLE(true, "All USB devices");
 void USB::DeviceList::enumerate_direct_sublists(const LRU::Cache &cache,
                                                 std::vector<ID::List> &nodes) const
 {
-    BUG("%s(): function shall not be called", __PRETTY_FUNCTION__);
+    MSG_BUG("%s(): function shall not be called", __PRETTY_FUNCTION__);
 }
 
 void USB::DeviceList::obliviate_child(ID::List child_id, const Entry *child)
@@ -115,9 +115,9 @@ void USB::DeviceList::obliviate_child(ID::List child_id, const Entry *child)
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
     else if(!LRU::KilledLists::get_singleton().erase(child_id))
-        BUG("Got obliviate notification for USB device %u, "
-            "but could not find it in device list (ID %u)",
-            child_id.get_raw_id(), get_cache_id().get_raw_id());
+        MSG_BUG("Got obliviate notification for USB device %u, "
+                "but could not find it in device list (ID %u)",
+                child_id.get_raw_id(), get_cache_id().get_raw_id());
 }
 
 static bool fill_list_from_mounta_data(USB::DeviceList &dev_list,
@@ -160,8 +160,8 @@ static bool fill_list_from_mounta_data(USB::DeviceList &dev_list,
         g_variant_get(tuple, "(u&s&sq&s)", &number, &label, &mountpoint, &device_id, &uuid);
 
         if(device_id == 0)
-            BUG("Received zero device ID for volume %u \"%s\" "
-                "from MounTA (skipping)", number, label);
+            MSG_BUG("Received zero device ID for volume %u \"%s\" "
+                    "from MounTA (skipping)", number, label);
         else
         {
             if(device_id != current_device_id)
@@ -170,8 +170,8 @@ static bool fill_list_from_mounta_data(USB::DeviceList &dev_list,
                 current_device_id = (current_device != nullptr) ? device_id : 0;
 
                 if(current_device == nullptr)
-                    BUG("Received volume %u \"%s\" on non-existent "
-                        "device ID %u from MounTA", number, label, device_id);
+                    MSG_BUG("Received volume %u \"%s\" on non-existent "
+                            "device ID %u from MounTA", number, label, device_id);
             }
 
             if(current_device != nullptr)
@@ -189,7 +189,7 @@ static bool fill_list_from_mounta_data(USB::DeviceList &dev_list,
 
 bool USB::DeviceList::init_from_mounta()
 {
-    log_assert(size() == 0);
+    msg_log_assert(size() == 0);
 
     GVariant *devices = nullptr;
     GVariant *volumes = nullptr;
@@ -233,7 +233,7 @@ bool USB::DeviceList::remove_from_list(uint16_t id, ID::List &volume_list_id)
 
     if(dev == nullptr)
     {
-        BUG("Tried to remove non-existent USB device %u", id);
+        MSG_BUG("Tried to remove non-existent USB device %u", id);
         return false;
     }
 
@@ -281,10 +281,10 @@ const USB::DeviceItemData *USB::DeviceList::get_device_by_name(const std::string
 void USB::VolumeItemData::get_name(std::string &name) const
 {
     const auto list = USB::Helpers::get_list_of_usb_devices();
-    log_assert(list != nullptr);
+    msg_log_assert(list != nullptr);
 
     const auto *dev = list->get_device_by_id(device_id_);
-    log_assert(dev != nullptr);
+    msg_log_assert(dev != nullptr);
 
     dev->get_volume_name(number_, name);
 }
@@ -292,10 +292,10 @@ void USB::VolumeItemData::get_name(std::string &name) const
 const std::string &USB::VolumeItemData::get_url() const
 {
     const auto list = USB::Helpers::get_list_of_usb_devices();
-    log_assert(list != nullptr);
+    msg_log_assert(list != nullptr);
 
     const auto *dev = list->get_device_by_id(device_id_);
-    log_assert(dev != nullptr);
+    msg_log_assert(dev != nullptr);
 
     return dev->get_volume_mountpoint(number_);
 }
@@ -319,9 +319,9 @@ void USB::VolumeList::obliviate_child(ID::List child_id, const Entry *child)
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
     else if(!LRU::KilledLists::get_singleton().erase(child_id))
-        BUG("Got obliviate notification for USB volume %u, "
-            "but could not find it in volume list (ID %u)",
-            child_id.get_raw_id(), get_cache_id().get_raw_id());
+        MSG_BUG("Got obliviate notification for USB volume %u, "
+                "but could not find it in volume list (ID %u)",
+                child_id.get_raw_id(), get_cache_id().get_raw_id());
 }
 
 void USB::DirList::enumerate_direct_sublists(const LRU::Cache &cache,
@@ -343,9 +343,9 @@ void USB::DirList::obliviate_child(ID::List child_id, const Entry *child)
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
     else if(!LRU::KilledLists::get_singleton().erase(child_id))
-        BUG("Got obliviate notification for child %u, "
-            "but could not find it in list (ID %u)",
-            child_id.get_raw_id(), get_cache_id().get_raw_id());
+        MSG_BUG("Got obliviate notification for child %u, "
+                "but could not find it in list (ID %u)",
+                child_id.get_raw_id(), get_cache_id().get_raw_id());
 }
 
 class CollectNamesData
@@ -448,12 +448,12 @@ static ID::List attach_new_dirlist(LRU::Cache &cache, ID::List parent_list,
     }
 
     auto dir = std::static_pointer_cast<USB::DirList>(cache.lookup(id));
-    log_assert(dir != nullptr);
+    msg_log_assert(dir != nullptr);
 
     if(!dir->fill_from_file_system(path))
     {
-        BUG("LEAKING LIST ID %u after failure to fill list from file system",
-            id.get_raw_id());
+        MSG_BUG("LEAKING LIST ID %u after failure to fill list from file system",
+                id.get_raw_id());
         error = ListError::PHYSICAL_MEDIA_IO;
         return ID::List();
     }
@@ -495,7 +495,7 @@ ID::List DeviceList::enter_child<VolumeItemData>(LRU::Cache &cache, LRU::CacheMo
             if(new_id.is_valid())
             {
                 auto volumes = std::static_pointer_cast<USB::VolumeList>(cache.lookup(new_id));
-                log_assert(volumes != nullptr);
+                msg_log_assert(volumes != nullptr);
                 device_data.fill_volume_list(*volumes);
             }
             else

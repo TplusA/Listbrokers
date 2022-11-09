@@ -193,7 +193,7 @@ class FlatList: public LRU::Entry, public GenericList<T>
 
     ID::List FIXME_remove(ID::Item idx)
     {
-        log_assert(idx.get_raw_id() < items_.size());
+        msg_log_assert(idx.get_raw_id() < items_.size());
         ID::List id = items_[idx.get_raw_id()].get_child_list();
         items_.erase(items_.begin() + idx.get_raw_id());
         return id;
@@ -377,8 +377,8 @@ class TiledList: public LRU::Entry, public GenericList<T>
 
         if(idx.get_raw_id() >= number_of_entries_)
         {
-            BUG("requested tile list materialization around %u, but have only %zu items",
-                idx.get_raw_id(), number_of_entries_);
+            MSG_BUG("requested tile list materialization around %u, but have only %zu items",
+                    idx.get_raw_id(), number_of_entries_);
             error = ListError::INTERNAL;
             return false;
         }
@@ -412,8 +412,8 @@ class TiledList: public LRU::Entry, public GenericList<T>
   private:
     void deferred_set_size(size_t new_size)
     {
-        log_assert(number_of_entries_ == 0);
-        log_assert(tiles_.empty());
+        msg_log_assert(number_of_entries_ == 0);
+        msg_log_assert(tiles_.empty());
         number_of_entries_ = new_size;
     }
 
@@ -671,14 +671,14 @@ struct ForEachItemTraits<const FlatList<ItemType>>
 
     static IterType begin(std::shared_ptr<ListType> list, ID::Item first)
     {
-        BUG("%s(): unexpected call", __PRETTY_FUNCTION__);
+        MSG_BUG("%s(): unexpected call", __PRETTY_FUNCTION__);
         return first.get_raw_id();
     }
 
     static const ListItem_<ItemType> &
     get_next_cached_element(std::shared_ptr<ListType> list, IterType &iter)
     {
-        BUG("%s(): unexpected call", __PRETTY_FUNCTION__);
+        MSG_BUG("%s(): unexpected call", __PRETTY_FUNCTION__);
         return (*list)[ID::Item(iter++)];
     }
 };

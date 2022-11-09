@@ -26,7 +26,7 @@ constexpr const std::chrono::seconds Cacheable::Override::EXPIRY_TIME;
 static int trampoline(void *user_data)
 {
     auto ovr = static_cast<Cacheable::Override *>(user_data);
-    log_assert(ovr != nullptr);
+    msg_log_assert(ovr != nullptr);
 
     if(ovr->is_invalidated() || ovr->is_timeout_exceeded())
         ovr->expired_fn_();
@@ -39,7 +39,7 @@ std::chrono::seconds Cacheable::Override::keep_alive()
     do_invalidate(false);
 
     glib_wrapper_.create_timeout(start_time_, active_timer_id_, trampoline, this);
-    log_assert(active_timer_id_ != 0);
+    msg_log_assert(active_timer_id_ != 0);
 
     return EXPIRY_TIME;
 }
@@ -67,14 +67,14 @@ void Cacheable::Override::do_invalidate(bool may_call_expiry_callback)
 
 bool Cacheable::Override::is_timeout_exceeded() const
 {
-    log_assert(start_time_ > INT64_MIN);
+    msg_log_assert(start_time_ > INT64_MIN);
     return glib_wrapper_.has_t_exceeded_expiry_time(start_time_);
 }
 
 void Cacheable::Override::list_invalidate(ID::List list_id, ID::List replacement_id)
 {
-    log_assert(list_id.is_valid());
-    log_assert(replacement_id.is_valid());
+    msg_log_assert(list_id.is_valid());
+    msg_log_assert(replacement_id.is_valid());
 
     auto it = nodes_on_overridden_path_to_root_.find(list_id);
 
@@ -87,7 +87,7 @@ void Cacheable::Override::list_invalidate(ID::List list_id, ID::List replacement
 
 std::chrono::seconds Cacheable::CheckWithOverrides::put_override(ID::List list_id)
 {
-    log_assert(list_id.is_valid());
+    msg_log_assert(list_id.is_valid());
 
     auto e = cache_.lookup(list_id);
 
@@ -144,7 +144,7 @@ bool Cacheable::CheckWithOverrides::is_cacheable(ID::List list_id) const
 
     if(e == nullptr)
     {
-        BUG("No list in cache for ID %u", list_id.get_raw_id());
+        MSG_BUG("No list in cache for ID %u", list_id.get_raw_id());
         return false;
     }
 

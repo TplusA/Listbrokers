@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2018, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -24,6 +24,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <cppcutter.h>
+#include <array>
 #include <string>
 
 #include "mock_messages.hh"

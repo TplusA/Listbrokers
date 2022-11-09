@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -82,10 +82,10 @@ class ListTreeManager
     std::shared_ptr<T> allocate_list(const std::shared_ptr<LRU::Entry> &parent,
                                      Args&&... args)
     {
-        log_assert(pending_list_ == nullptr);
+        msg_log_assert(pending_list_ == nullptr);
 
         auto l = std::make_shared<T>(parent, args...);
-        log_assert(l != nullptr);
+        msg_log_assert(l != nullptr);
 
         pending_list_ = l;
 
@@ -109,7 +109,7 @@ class ListTreeManager
                    const ID::List::context_t ctx,
                    size_t size_of_list, bool pin_it)
     {
-        log_assert(list == pending_list_);
+        msg_log_assert(list == pending_list_);
         pending_list_ = nullptr;
 
         const ID::List list_id =
@@ -123,8 +123,8 @@ class ListTreeManager
 
     void expel_unblessed(std::shared_ptr<LRU::Entry> &&list)
     {
-        log_assert(list == pending_list_);
-        log_assert(pending_list_ != nullptr);
+        msg_log_assert(list == pending_list_);
+        msg_log_assert(pending_list_ != nullptr);
         list = nullptr;
         pending_list_ = nullptr;
     }

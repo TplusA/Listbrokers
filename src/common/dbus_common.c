@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -34,8 +34,8 @@ static struct dbus_register_submodule_t registered_submodules[6];
 
 void dbus_common_register_submodule(const struct dbus_register_submodule_t *submodule)
 {
-    log_assert(submodule != NULL);
-    log_assert(number_of_registered_submodules < sizeof(registered_submodules) / sizeof(registered_submodules[0]));
+    msg_log_assert(submodule != NULL);
+    msg_log_assert(number_of_registered_submodules < sizeof(registered_submodules) / sizeof(registered_submodules[0]));
 
     /* use memcpy() instead of simple assignment to avoid warning due to
      * assignment to const members */

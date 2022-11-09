@@ -25,6 +25,7 @@
 
 #include <cppcutter.h>
 #include <algorithm>
+#include <array>
 
 #include "mock_messages.hh"
 #include "mock_backtrace.hh"

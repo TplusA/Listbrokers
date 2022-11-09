@@ -81,7 +81,7 @@ static bool name_is_ok(const gchar *name)
 
 void UPnP::ServerItemData::get_name(std::string &name) const
 {
-    log_assert(dbus_proxy_ != nullptr);
+    msg_log_assert(dbus_proxy_ != nullptr);
 
     const gchar *temp = tdbus_dleynaserver_media_device_get_friendly_name(dbus_proxy_);
 
@@ -144,7 +144,7 @@ void UPnP::ServerList::enumerate_tree_of_sublists(const LRU::Cache &cache,
 void UPnP::ServerList::enumerate_direct_sublists(const LRU::Cache &cache,
                                                  std::vector<ID::List> &nodes) const
 {
-    BUG("%s(): function shall not be called", __PRETTY_FUNCTION__);
+    MSG_BUG("%s(): function shall not be called", __PRETTY_FUNCTION__);
 }
 
 void UPnP::ServerList::obliviate_child(ID::List child_id, const Entry *child)
@@ -154,9 +154,9 @@ void UPnP::ServerList::obliviate_child(ID::List child_id, const Entry *child)
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
     else if(!LRU::KilledLists::get_singleton().erase(child_id))
-        BUG("Got obliviate notification for server root %u, "
-            "but could not find it in server list (ID %u)",
-            child_id.get_raw_id(), get_cache_id().get_raw_id());
+        MSG_BUG("Got obliviate notification for server root %u, "
+                "but could not find it in server list (ID %u)",
+                child_id.get_raw_id(), get_cache_id().get_raw_id());
 }
 
 class AddToListAsyncData
@@ -253,7 +253,7 @@ void UPnP::ServerList::media_device_proxy_connected(GObject *source_object,
                                                     gpointer user_data)
 {
     auto *data_ptr = static_cast<AddToListAsyncData *>(user_data);
-    log_assert(data_ptr != nullptr);
+    msg_log_assert(data_ptr != nullptr);
 
     auto &data = *data_ptr;
 
@@ -296,7 +296,7 @@ void UPnP::ServerList::media_device_proxy_connected(GObject *source_object,
         proxy = nullptr;
     }
 
-    log_assert(data.data_ != nullptr);
+    msg_log_assert(data.data_ != nullptr);
     data.server_list_.servers_lost_and_found_.server_processed(data.object_path_,
                                                                *data.data_);
 
@@ -309,7 +309,7 @@ void UPnP::ServerList::add_to_list(const std::string &object_path,
                                    std::function<void()> &&notify_server_added)
 {
     auto data = servers_lost_and_found_.server_found(object_path);
-    log_assert(data != nullptr);
+    msg_log_assert(data != nullptr);
 
     /* raw new here because of the C code path; matching delete to be found in
      * #UPnP::ServerList::media_device_proxy_connected() */
@@ -367,9 +367,9 @@ void UPnP::MediaList::obliviate_child(ID::List child_id, const Entry *child)
     if(lookup_item_id_by_child_id(child_id, idx))
         (*this)[idx].obliviate_child();
     else if(!LRU::KilledLists::get_singleton().erase(child_id))
-        BUG("Got obliviate notification for child %u, "
-            "but could not find it in list with ID %u",
-            child_id.get_raw_id(), get_cache_id(). get_raw_id());
+        MSG_BUG("Got obliviate notification for child %u, "
+                "but could not find it in list with ID %u",
+                child_id.get_raw_id(), get_cache_id(). get_raw_id());
 }
 
 template <typename T>
@@ -377,15 +377,15 @@ static inline std::string get_dbus_object_path(const UPnP::MediaList &list)
 {
     auto item_list = std::static_pointer_cast<T>(list.get_parent());
     auto child_item = item_list->lookup_child_by_id(list.get_cache_id());
-    log_assert(child_item != nullptr);
+    msg_log_assert(child_item != nullptr);
 
     return child_item->get_specific_data().get_dbus_path_copy();
 }
 
 std::string UPnP::MediaList::get_dbus_object_path() const
 {
-    log_assert(get_parent() != nullptr);
-    log_assert(get_cache_id().is_valid());
+    msg_log_assert(get_parent() != nullptr);
+    msg_log_assert(get_cache_id().is_valid());
 
     if(get_parent()->get_parent() != nullptr)
     {

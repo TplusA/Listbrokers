@@ -49,8 +49,8 @@ bool LRU::KilledLists::erase(ID::List list_id)
     }
     catch(const std::exception &e)
     {
-        BUG("Exception while trying to remove killed ID %u: %s",
-            list_id.get_raw_id(), e.what());
+        MSG_BUG("Exception while trying to remove killed ID %u: %s",
+                list_id.get_raw_id(), e.what());
         return false;
     }
 }
@@ -82,7 +82,7 @@ LRU::KilledLists &LRU::KilledLists::get_singleton()
 ID::List LRU::CacheIdGenerator::next(LRU::CacheMode cache_mode,
                                      ID::List::context_t ctx)
 {
-    log_assert(ctx <= DBUS_LISTS_CONTEXT_ID_MAX);
+    msg_log_assert(ctx <= DBUS_LISTS_CONTEXT_ID_MAX);
 
     uint32_t &next_id_for_context = next_id_[ctx];
     const uint32_t start_point = next_id_for_context;
@@ -181,8 +181,8 @@ ssize_t LRU::Cache::unlink_objects_on_path_to_root(Entry *entry,
             if(Entry::AgingList::next_younger(*e) != nullptr ||
                Entry::AgingList::next_older(*e) != nullptr)
             {
-                log_assert(Entry::AgeInfo::get_last_use_time(*e) ==
-                           Entry::AgeInfo::get_last_use_time(*reconnect_tail_object));
+                msg_log_assert(Entry::AgeInfo::get_last_use_time(*e) ==
+                               Entry::AgeInfo::get_last_use_time(*reconnect_tail_object));
                 reconnect_tail_object = e;
             }
             else
@@ -190,8 +190,8 @@ ssize_t LRU::Cache::unlink_objects_on_path_to_root(Entry *entry,
         }
     }
 
-    log_assert(reconnect_tail_object == nullptr ||
-               Entry::AgingList::next_younger(*reconnect_tail_object) == nullptr);
+    msg_log_assert(reconnect_tail_object == nullptr ||
+                   Entry::AgingList::next_younger(*reconnect_tail_object) == nullptr);
 
     return depth;
 }
@@ -226,12 +226,12 @@ bool LRU::Cache::pin_or_unpin_objects_on_path_to_root(const LRU::Cache &cache,
 
 ssize_t LRU::Cache::use(const std::shared_ptr<Entry> entry)
 {
-    log_assert(entry != nullptr);
-    log_assert(entry->get_cache_id().is_valid());
-    log_assert(lookup(entry->get_cache_id()) != nullptr);
+    msg_log_assert(entry != nullptr);
+    msg_log_assert(entry->get_cache_id().is_valid());
+    msg_log_assert(lookup(entry->get_cache_id()) != nullptr);
 
     const Timebase::time_point now = timebase->now();
-    log_assert(now >= minimum_required_creation_time_);
+    msg_log_assert(now >= minimum_required_creation_time_);
 
     if(now <= minimum_required_creation_time_)
     {
@@ -267,7 +267,7 @@ ssize_t LRU::Cache::use(const std::shared_ptr<Entry> entry)
         Entry::AgingList::join_lists(const_cast<Entry *>(reconnect_tail_object),
                                      const_cast<Entry *>(deepest_youngest_object_));
 
-    log_assert(oldest_object_->is_leaf());
+    msg_log_assert(oldest_object_->is_leaf());
 
     return depth;
 }
@@ -312,11 +312,11 @@ ID::List LRU::Cache::insert(std::shared_ptr<Entry> &&entry,
                             const ID::List::context_t ctx,
                             size_t size_of_entry)
 {
-    log_assert(entry != nullptr);
+    msg_log_assert(entry != nullptr);
 
     if(entry->get_cache_id().is_valid())
     {
-        BUG("Attempted to insert already cached object into cache");
+        MSG_BUG("Attempted to insert already cached object into cache");
         return ID::List();
     }
 
@@ -324,7 +324,7 @@ ID::List LRU::Cache::insert(std::shared_ptr<Entry> &&entry,
 
     if(entry_last_use < minimum_required_creation_time_)
     {
-        BUG("Attempted to insert outdated object into cache");
+        MSG_BUG("Attempted to insert outdated object into cache");
         return ID::List();
     }
 
@@ -334,13 +334,13 @@ ID::List LRU::Cache::insert(std::shared_ptr<Entry> &&entry,
     {
         if(!parent->get_cache_id().is_valid())
         {
-            BUG("Attempted to insert object into cache with unknown parent");
+            MSG_BUG("Attempted to insert object into cache with unknown parent");
             return ID::List();
         }
 
         if(entry_last_use < Entry::AgeInfo::get_last_use_time(parent))
         {
-            BUG("Attempted to insert object into cache with older parent");
+            MSG_BUG("Attempted to insert object into cache with older parent");
             return ID::List();
         }
 
@@ -349,14 +349,14 @@ ID::List LRU::Cache::insert(std::shared_ptr<Entry> &&entry,
 
         Entry::AgingList::add_child(parent);
 
-        log_assert(deepest_youngest_object_ == parent.get());
+        msg_log_assert(deepest_youngest_object_ == parent.get());
 
         if(entry->equal_age(*parent))
             deepest_youngest_object_ = entry.get();
     }
     else
     {
-        log_assert(root_object_ == nullptr);
+        msg_log_assert(root_object_ == nullptr);
         root_object_ = entry.get();
         deepest_youngest_object_ = entry.get();
     }
@@ -364,7 +364,7 @@ ID::List LRU::Cache::insert(std::shared_ptr<Entry> &&entry,
     const ID::List id =
         Entry::CacheInfo::set_id(entry, id_generator_.next(cmode, ctx));
 
-    log_assert(all_objects_.find(id) == all_objects_.end());
+    msg_log_assert(all_objects_.find(id) == all_objects_.end());
     all_objects_.insert(std::make_pair(id, entry));
 
     minimum_required_creation_time_ = Entry::AgeInfo::get_last_use_time(entry);
@@ -372,7 +372,7 @@ ID::List LRU::Cache::insert(std::shared_ptr<Entry> &&entry,
     if(Entry::AgingList::insert_before(entry, parent))
         oldest_object_ = entry.get();
 
-    log_assert(oldest_object_->is_leaf());
+    msg_log_assert(oldest_object_->is_leaf());
 
     Entry::CacheInfo::set_size(entry, size_of_entry);
     total_size_ += size_of_entry;
@@ -426,7 +426,7 @@ ID::List LRU::Cache::insert_again(std::shared_ptr<Entry> &&entry)
     const auto inserted =
 #endif /* !NDEBUG */
     all_objects_.insert(std::make_pair(new_id, std::move(entry)));
-    log_assert(inserted.second);
+    msg_log_assert(inserted.second);
 
     if(old_id == pinned_object_id_)
         pinned_object_id_ = new_id;
@@ -436,7 +436,7 @@ ID::List LRU::Cache::insert_again(std::shared_ptr<Entry> &&entry)
 
 std::shared_ptr<LRU::Entry> LRU::Cache::lookup(ID::List entry_id) const
 {
-    log_assert(entry_id.is_valid());
+    msg_log_assert(entry_id.is_valid());
 
     auto obj = all_objects_.find(entry_id);
 
@@ -454,7 +454,7 @@ bool LRU::Cache::set_object_size(ID::List entry_id, size_t size_of_entry)
         return false;
 
     const size_t old_size = Entry::CacheInfo::get_size(obj);
-    log_assert(old_size <= total_size_);
+    msg_log_assert(old_size <= total_size_);
     total_size_ -= old_size;
 
     Entry::CacheInfo::set_size(obj, size_of_entry);
@@ -478,10 +478,10 @@ bool LRU::Cache::set_object_size(ID::List entry_id, size_t size_of_entry)
 const LRU::Entry *LRU::Cache::discard(const Entry *const candidate,
                                       bool allow_notifications)
 {
-    log_assert(oldest_object_ != nullptr);
-    log_assert(oldest_object_->is_leaf());
-    log_assert(candidate != nullptr);
-    log_assert(!candidate->is_pinned());
+    msg_log_assert(oldest_object_ != nullptr);
+    msg_log_assert(oldest_object_->is_leaf());
+    msg_log_assert(candidate != nullptr);
+    msg_log_assert(!candidate->is_pinned());
 
     auto next_candidate = Entry::AgingList::unlink(*const_cast<Entry *>(candidate));
     if(oldest_object_ == candidate)
@@ -495,7 +495,7 @@ const LRU::Entry *LRU::Cache::discard(const Entry *const candidate,
     if(candidate == deepest_youngest_object_)
         deepest_youngest_object_ = parent.get();
 
-    log_assert(Entry::CacheInfo::get_size(*candidate) <= total_size_);
+    msg_log_assert(Entry::CacheInfo::get_size(*candidate) <= total_size_);
     total_size_ -= Entry::CacheInfo::get_size(*candidate);
 
     ID::List removed_object_id = candidate->get_cache_id();
@@ -508,7 +508,7 @@ const LRU::Entry *LRU::Cache::discard(const Entry *const candidate,
     size_t removed_count =
 #endif /* !NDEBUG */
     all_objects_.erase(removed_object_id);
-    log_assert(removed_count == 1);
+    msg_log_assert(removed_count == 1);
 
     if(allow_notifications)
         notify_object_removed_(removed_object_id);
@@ -545,7 +545,7 @@ class SetFlagUntilReturn
 
 std::chrono::seconds LRU::Cache::gc()
 {
-    log_assert(!is_garbage_collector_running_);
+    msg_log_assert(!is_garbage_collector_running_);
 
     SetFlagUntilReturn flag_guard(is_garbage_collector_running_);
 
@@ -603,9 +603,9 @@ std::chrono::seconds LRU::Cache::gc()
 
     if(oldest_object_ == nullptr)
     {
-        log_assert(root_object_ == nullptr);
-        log_assert(deepest_youngest_object_ == nullptr);
-        log_assert(all_objects_.empty());
+        msg_log_assert(root_object_ == nullptr);
+        msg_log_assert(deepest_youngest_object_ == nullptr);
+        msg_log_assert(all_objects_.empty());
 
         return std::chrono::seconds::max();
     }
@@ -617,7 +617,7 @@ std::chrono::seconds LRU::Cache::gc()
     {
         /* There are still objects in the cache, but all of them are pinned. */
         for(const auto &obj : all_objects_)
-            log_assert(obj.second->is_pinned());
+            msg_log_assert(obj.second->is_pinned());
 
         return std::chrono::seconds::max();
     }
@@ -654,7 +654,7 @@ bool LRU::Cache::toposort_for_purge(const std::vector<ID::List>::iterator &kill_
     if(!lookup(*kill_list_begin)->is_leaf())
     {
         /* no leaves */
-        BUG("Cannot sort for purge because set contains no leaves");
+        MSG_BUG("Cannot sort for purge because set contains no leaves");
         return false;
     }
 
@@ -706,7 +706,7 @@ bool LRU::Cache::toposort_for_purge(const std::vector<ID::List>::iterator &kill_
 
     if(sorted_by_distance.size() != size_t(kill_list_end - first_internal))
     {
-        BUG("Cannot sort for purge because kill list is inconsistent");
+        MSG_BUG("Cannot sort for purge because kill list is inconsistent");
         return false;
     }
 
@@ -730,7 +730,7 @@ void LRU::Cache::purge_entries(const std::vector<ID::List>::const_iterator &kill
         std::shared_ptr<LRU::Entry> obj = lookup(*it);
 
         if(obj == nullptr)
-            BUG("Tried to purge nonexistent entry %u", it->get_raw_id());
+            MSG_BUG("Tried to purge nonexistent entry %u", it->get_raw_id());
         else
         {
             if(obj->is_pinned())
@@ -894,7 +894,7 @@ void LRU::Cache::self_check() const
 void LRU::AgingListEntry::insert_oldest(Entry *oldest, Entry *younger_object,
                                         AgingListEntry &younger_aging_list_data)
 {
-    log_assert(younger_aging_list_data.older_ == nullptr);
+    msg_log_assert(younger_aging_list_data.older_ == nullptr);
 
     this->older_ = nullptr;
     this->younger_ = younger_object;
@@ -969,7 +969,7 @@ bool LRU::Entry::insert_before(const Entry *const younger_object) const
 
     if(older_object != nullptr)
     {
-        log_assert(older_object->aging_list_data_.next_younger() == younger_object);
+        msg_log_assert(older_object->aging_list_data_.next_younger() == younger_object);
 
         const_cast<Entry *>(this)->aging_list_data_.insert_between(const_cast<Entry *>(this),
                                                                    const_cast<Entry *>(older_object)->aging_list_data_,
@@ -987,9 +987,9 @@ bool LRU::Entry::insert_before(const Entry *const younger_object) const
 
 void LRU::Entry::append(const Entry *const head) const
 {
-    log_assert(head != nullptr);
-    log_assert(head->aging_list_data_.next_older() == nullptr);
-    log_assert(this->aging_list_data_.next_younger() == nullptr);
+    msg_log_assert(head != nullptr);
+    msg_log_assert(head->aging_list_data_.next_older() == nullptr);
+    msg_log_assert(this->aging_list_data_.next_younger() == nullptr);
 
     const_cast<Entry *>(this)->aging_list_data_.join(const_cast<Entry *>(this),
                                                      const_cast<Entry *>(head),

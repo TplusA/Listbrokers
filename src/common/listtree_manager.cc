@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -28,7 +28,7 @@
 
 void ListTreeManager::announce_root_list(ID::List id)
 {
-    log_assert(id.is_valid());
+    msg_log_assert(id.is_valid());
 
     cache_check_.list_invalidate(ID::List(), id);
 
@@ -42,7 +42,7 @@ void ListTreeManager::reinsert_list(ID::List &id)
     ID::List old_id = list->get_cache_id();
 
     id = cache_.insert_again(std::move(list));
-    log_assert(id != old_id);
+    msg_log_assert(id != old_id);
 
     cache_check_.list_invalidate(old_id, id);
 
@@ -88,7 +88,7 @@ ListTreeManager::force_list_into_cache(ID::List list_id, bool force)
 void ListTreeManager::repin_if_first_is_deepest_pinned_list(ID::List first_id,
                                                             ID::List other_id)
 {
-    log_assert(other_id.is_valid());
+    msg_log_assert(other_id.is_valid());
 
     if(!first_id.is_valid())
         return;
@@ -122,7 +122,7 @@ ListTreeManager::purge_subtree(ID::List old_id, ID::List new_id,
     std::vector<ID::List> kill_list;
     list->enumerate_tree_of_sublists(cache_, kill_list);
 
-    log_assert(kill_list.begin() != kill_list.end());
+    msg_log_assert(kill_list.begin() != kill_list.end());
 
     size_t first_to_kill;
     ListTreeManager::PurgeResult result;

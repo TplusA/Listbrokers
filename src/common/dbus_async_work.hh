@@ -97,7 +97,7 @@ class ReplyPathTracker
         switch(reply_path_)
         {
           case ReplyPath::NONE:
-            BUG("Requesting fast path before execution");
+            MSG_BUG("Requesting fast path before execution");
             break;
 
           case ReplyPath::SCHEDULED:
@@ -133,7 +133,7 @@ class ReplyPathTracker
         switch(reply_path_)
         {
           case ReplyPath::NONE:
-            BUG("Requesting slow path before execution");
+            MSG_BUG("Requesting slow path before execution");
             break;
 
           case ReplyPath::SCHEDULED:
@@ -175,7 +175,7 @@ class ReplyPathTracker
           case ReplyPath::SLOW_PATH_COOKIE_SENT:
           case ReplyPath::SLOW_PATH_READY_NOTIFIED:
           case ReplyPath::SLOW_PATH_FETCHING:
-            BUG("Cannot set reply path tracker to slow path phase 2 in state %d", int(reply_path_));
+            MSG_BUG("Cannot set reply path tracker to slow path phase 2 in state %d", int(reply_path_));
             break;
         }
 
@@ -197,7 +197,7 @@ class ReplyPathTracker
           case ReplyPath::SLOW_PATH_ENTERED:
           case ReplyPath::SLOW_PATH_READY_NOTIFIED:
           case ReplyPath::SLOW_PATH_FETCHING:
-            BUG("Shouldn't have notified client about completion in state %d", int(reply_path_));
+            MSG_BUG("Shouldn't have notified client about completion in state %d", int(reply_path_));
             break;
         }
 
@@ -219,7 +219,7 @@ class ReplyPathTracker
           case ReplyPath::SLOW_PATH_COOKIE_SENT:
           case ReplyPath::SLOW_PATH_READY_NOTIFIED:
           case ReplyPath::SLOW_PATH_FETCHING:
-            BUG("Cannot set reply path tracker to scheduled state in state %d", int(reply_path_));
+            MSG_BUG("Cannot set reply path tracker to scheduled state in state %d", int(reply_path_));
             break;
         }
     }
@@ -242,7 +242,7 @@ class ReplyPathTracker
           case ReplyPath::SLOW_PATH_ENTERED:
           case ReplyPath::SLOW_PATH_COOKIE_SENT:
           case ReplyPath::SLOW_PATH_FETCHING:
-            BUG("Cannot set reply path tracker to waiting state in state %d", int(reply_path_));
+            MSG_BUG("Cannot set reply path tracker to waiting state in state %d", int(reply_path_));
             break;
         }
     }
@@ -334,8 +334,8 @@ class Work
 
           case State::RUNNING:
           case State::CANCELING:
-            BUG("Destroying async work in state %u (will cause Use-After-Free)",
-                static_cast<unsigned int>(state_));
+            MSG_BUG("Destroying async work in state %u (will cause Use-After-Free)",
+                    static_cast<unsigned int>(state_));
             break;
         }
 
@@ -425,7 +425,7 @@ class Work
 
                   case State::DONE:
                   case State::CANCELED:
-                    BUG("Unexpected final work state %d after run", int(state_));
+                    MSG_BUG("Unexpected final work state %d after run", int(state_));
                     break;
                 }
 
@@ -441,7 +441,7 @@ class Work
             break;
         }
 
-        BUG("Run async work in state %u", static_cast<unsigned int>(state_));
+        MSG_BUG("Run async work in state %u", static_cast<unsigned int>(state_));
     }
 
   public:
@@ -478,7 +478,7 @@ class Work
             return;
         }
 
-        BUG("Cancel async work in state %u", static_cast<unsigned int>(state_));
+        MSG_BUG("Cancel async work in state %u", static_cast<unsigned int>(state_));
     }
 
   protected:
@@ -518,22 +518,22 @@ class Work
         switch(state_)
         {
           case State::RUNNABLE:
-            BUG_IF(state == State::CANCELING, "%p RUNNABLE -> CANCELING", static_cast<const void *>(this));
+            MSG_BUG_IF(state == State::CANCELING, "%p RUNNABLE -> CANCELING", static_cast<const void *>(this));
             break;
 
           case State::RUNNING:
-            BUG_IF(state == State::RUNNABLE, "%p RUNNING -> RUNNABLE", static_cast<const void *>(this));
+            MSG_BUG_IF(state == State::RUNNABLE, "%p RUNNING -> RUNNABLE", static_cast<const void *>(this));
             break;
 
           case State::CANCELING:
-            BUG_IF(state == State::RUNNABLE, "%p CANCELING -> RUNNABLE", static_cast<const void *>(this));
-            BUG_IF(state == State::RUNNING,  "%p CANCELING -> RUNNING", static_cast<const void *>(this));
-            BUG_IF(state == State::DONE,     "%p CANCELING -> DONE", static_cast<const void *>(this));
+            MSG_BUG_IF(state == State::RUNNABLE, "%p CANCELING -> RUNNABLE", static_cast<const void *>(this));
+            MSG_BUG_IF(state == State::RUNNING,  "%p CANCELING -> RUNNING", static_cast<const void *>(this));
+            MSG_BUG_IF(state == State::DONE,     "%p CANCELING -> DONE", static_cast<const void *>(this));
             break;
 
           case State::DONE:
           case State::CANCELED:
-            BUG("%p going from final state %d to %d", static_cast<const void *>(this), int(state_), int(state));
+            MSG_BUG("%p going from final state %d to %d", static_cast<const void *>(this), int(state_), int(state));
             break;
         }
 

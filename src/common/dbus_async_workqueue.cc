@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -93,8 +93,8 @@ bool DBusAsync::WorkQueue::add_work(std::shared_ptr<Work> &&work,
 
 bool DBusAsync::WorkQueue::queue_work(std::shared_ptr<Work> work)
 {
-    log_assert(work != nullptr);
-    log_assert(work->get_state() == Work::State::RUNNABLE);
+    msg_log_assert(work != nullptr);
+    msg_log_assert(work->get_state() == Work::State::RUNNABLE);
 
     if(work_in_progress_ != nullptr)
     {
@@ -145,7 +145,7 @@ bool DBusAsync::WorkQueue::process_work_item(LoggedLock::UniqueLock<LoggedLock::
         return false;
     }
 
-    log_assert(work_in_progress_ != nullptr);
+    msg_log_assert(work_in_progress_ != nullptr);
     work = work_in_progress_;
 
     switch(work->get_state())
@@ -170,11 +170,11 @@ bool DBusAsync::WorkQueue::process_work_item(LoggedLock::UniqueLock<LoggedLock::
         break;
 
       case Work::State::RUNNING:
-        BUG("Queued work item RUNNING");
+        MSG_BUG("Queued work item RUNNING");
         break;
 
       case Work::State::DONE:
-        BUG("Queued work item DONE");
+        MSG_BUG("Queued work item DONE");
         break;
 
       case Work::State::CANCELING:

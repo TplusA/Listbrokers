@@ -137,14 +137,14 @@ class ListItem_
 
     void set_child_list(ID::List child)
     {
-        log_assert(child.is_valid());
-        log_assert(!child_.is_valid());
+        msg_log_assert(child.is_valid());
+        msg_log_assert(!child_.is_valid());
         child_ = child;
     }
 
     void obliviate_child()
     {
-        log_assert(child_.is_valid());
+        msg_log_assert(child_.is_valid());
         child_ = ID::List();
     }
 
@@ -365,7 +365,7 @@ class ListTile_
     void done_notification(uint16_t count)
     {
         stored_items_count_ += count;
-        log_assert(stored_items_count_ <= tile_size);
+        msg_log_assert(stored_items_count_ <= tile_size);
         state_ = ListTileState::READY;
 
         tile_processed_.notify_all();
@@ -381,8 +381,8 @@ class ListTile_
      */
     ListTile_ *activate_tile(ID::Item idx)
     {
-        log_assert(idx.get_raw_id() <= std::numeric_limits<decltype(base_)>::max());
-        log_assert(state_ == ListTileState::FREE);
+        msg_log_assert(idx.get_raw_id() <= std::numeric_limits<decltype(base_)>::max());
+        msg_log_assert(state_ == ListTileState::FREE);
 
         base_ = idx.get_raw_id();
         base_ -= idx.get_raw_id() % tile_size;
@@ -691,9 +691,9 @@ class ListThreads
      */
     void start(size_t number_of_threads)
     {
-        log_assert(threads_.empty());
-        log_assert(work_queue_.work_.empty());
-        log_assert(number_of_threads > 0);
+        msg_log_assert(threads_.empty());
+        msg_log_assert(work_queue_.work_.empty());
+        msg_log_assert(number_of_threads > 0);
 
         work_queue_.shutdown_request_ = false;
 
@@ -763,8 +763,8 @@ class ListThreads
     void enqueue(ListTile_<T, tile_size> &tile,
                  const TiledListFillerIface<T> &filler, ID::List list_id)
     {
-        log_assert(!threads_.empty());
-        log_assert(tile.get_state() == ListTileState::FILLING);
+        msg_log_assert(!threads_.empty());
+        msg_log_assert(tile.get_state() == ListTileState::FILLING);
 
         LOGGED_LOCK_CONTEXT_HINT;
         std::lock_guard<LoggedLock::Mutex> lock(work_queue_.lock_);
@@ -785,9 +785,9 @@ class ListThreads
 
         for(auto &work : work_queue_.work_)
         {
-            log_assert(work.tile_->get_state() == ListTileState::FILLING);
+            msg_log_assert(work.tile_->get_state() == ListTileState::FILLING);
             work.tile_->canceled_notification(killed_list, ListError());
-            log_assert(work.tile_->get_state() == ListTileState::CANCELED);
+            msg_log_assert(work.tile_->get_state() == ListTileState::CANCELED);
         }
 
         work_queue_.work_.clear();
@@ -882,8 +882,8 @@ class ListThreads
          * state. A state of #ListTileState::FILLING would also be a
          * programming error because this state indicates that the tile is
          * about to be or currently being processed. */
-        log_assert(tile.get_state() != ListTileState::FREE);
-        log_assert(tile.get_state() != ListTileState::FILLING);
+        msg_log_assert(tile.get_state() != ListTileState::FREE);
+        msg_log_assert(tile.get_state() != ListTileState::FILLING);
     }
 
   private:
@@ -1174,7 +1174,7 @@ class ListTiles_
         active_tiles_[size_t(ItemLocation::CENTER)] = active_tiles_[size_t(tile_to_keep)];
         active_tiles_[size_t(tile_to_keep)] = temp;
 
-        log_assert(active_tiles_[size_t(tile_to_push_out)] != nullptr);
+        msg_log_assert(active_tiles_[size_t(tile_to_push_out)] != nullptr);
 
         const ID::Item adjacent_index =
             index_in_adjacent_tile(idx, total_number_of_items, tile_to_keep);
@@ -1183,7 +1183,7 @@ class ListTiles_
         {
            if(!temp->is_tile_for(adjacent_index))
            {
-               log_assert(!temp->is_free());
+               msg_log_assert(!temp->is_free());
                thread_pool_.cancel_filler(killed_list, *temp);
 
                /* no locking of temp tile required here because the only thread
@@ -1195,7 +1195,7 @@ class ListTiles_
            else
            {
                /* the list is short and resides completely in memory */
-               log_assert(active_tiles_[size_t(ItemLocation::CENTER)] != nullptr);
+               msg_log_assert(active_tiles_[size_t(ItemLocation::CENTER)] != nullptr);
                return;
            }
         }
@@ -1208,7 +1208,7 @@ class ListTiles_
                       "materialize center tile around index %u", idx.get_raw_id());
 
             size_t tile_index = find_free_tile();
-            log_assert(tile_index < maximum_number_of_active_tiles);
+            msg_log_assert(tile_index < maximum_number_of_active_tiles);
             auto tile = hot_tiles_[tile_index].activate_tile(idx);
             active_tiles_[size_t(ItemLocation::CENTER)] = tile;
 
@@ -1228,8 +1228,8 @@ class ListTiles_
                   LRU::KilledLists &killed_list, ID::List list_id, ID::Item idx,
                   size_t total_number_of_items, const unsigned int steps)
     {
-        log_assert(steps > 0);
-        log_assert(steps < maximum_number_of_hot_items);
+        msg_log_assert(steps > 0);
+        msg_log_assert(steps < maximum_number_of_hot_items);
 
         for(unsigned int i = 0; i < steps; ++i)
             slide(filler, killed_list, list_id,
@@ -1242,8 +1242,8 @@ class ListTiles_
                     LRU::KilledLists &killed_list, ID::List list_id, ID::Item idx,
                     size_t total_number_of_items, const unsigned int steps)
     {
-        log_assert(steps > 0);
-        log_assert(steps < maximum_number_of_hot_items);
+        msg_log_assert(steps > 0);
+        msg_log_assert(steps < maximum_number_of_hot_items);
 
         for(unsigned int i = 0; i < steps; ++i)
             slide(filler, killed_list, list_id,
@@ -1366,7 +1366,7 @@ class ListTiles_
         switch(slide_direction)
         {
           case ItemLocation::CENTER:
-            BUG("Invalid slide direction");
+            MSG_BUG("Invalid slide direction");
             break;
 
           case ItemLocation::UP:
@@ -1460,8 +1460,8 @@ class ListTiles_
         number_of_spanned_tiles =
             1 + (position_of_first_in_tile + count - 1) / tile_size;
 
-        log_assert(number_of_spanned_tiles >= 1);
-        log_assert(number_of_spanned_tiles <= maximum_number_of_active_tiles);
+        msg_log_assert(number_of_spanned_tiles >= 1);
+        msg_log_assert(number_of_spanned_tiles <= maximum_number_of_active_tiles);
 
         ItemLocation retval = contains(first);
 
@@ -1470,7 +1470,7 @@ class ListTiles_
             required_number_of_slides =
                 compute_number_of_required_slides(retval, true, number_of_spanned_tiles);
 
-            log_assert(required_number_of_slides < maximum_number_of_active_tiles);
+            msg_log_assert(required_number_of_slides < maximum_number_of_active_tiles);
 
             return retval;
         }
@@ -1486,7 +1486,7 @@ class ListTiles_
                 required_number_of_slides =
                     compute_number_of_required_slides(retval, false, number_of_spanned_tiles);
 
-                log_assert(required_number_of_slides < maximum_number_of_active_tiles);
+                msg_log_assert(required_number_of_slides < maximum_number_of_active_tiles);
 
                 return retval;
             }

@@ -134,8 +134,8 @@ class ServersLostAndFound
 
         if(it == server_added_queues_.end())
         {
-            BUG("Processed UPnP server %s (serial %u), but server unknown",
-                object_path.c_str(), data.serial_);
+            MSG_BUG("Processed UPnP server %s (serial %u), but server unknown",
+                    object_path.c_str(), data.serial_);
             return;
         }
 
@@ -143,8 +143,8 @@ class ServersLostAndFound
 
         if(queue.empty())
         {
-            BUG("Processed UPnP server %s (serial %u), but queue empty",
-                object_path.c_str(), data.serial_);
+            MSG_BUG("Processed UPnP server %s (serial %u), but queue empty",
+                    object_path.c_str(), data.serial_);
             server_added_queues_.erase(it);
             return;
         }
@@ -162,9 +162,9 @@ class ServersLostAndFound
             queue.pop_front();
         else
         {
-            BUG("UPnP server %s with serial %u not %sin queue",
-                object_path.c_str(), data.serial_,
-                add_data != queue.end() ? "first " : "");
+            MSG_BUG("UPnP server %s with serial %u not %sin queue",
+                    object_path.c_str(), data.serial_,
+                    add_data != queue.end() ? "first " : "");
             queue.erase(add_data);
         }
 

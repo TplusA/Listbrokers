@@ -71,7 +71,7 @@ class ListTree: public ListTreeIface
     {
         devices_list_id_ =
             lt_manager_.allocate_blessed_list<USB::DeviceList>(nullptr, 0, 0, true);
-        log_assert(devices_list_id_.is_valid());
+        msg_log_assert(devices_list_id_.is_valid());
     }
 
     void start_threads(unsigned int number_of_threads, bool synchronous_mode) const override {}
@@ -100,8 +100,8 @@ class ListTree: public ListTreeIface
     {
         if(volume_list.is_valid())
         {
-            log_assert(volume_list.get_raw_id() != devices_list_id_.get_raw_id());
-            log_assert(lt_manager_.lookup_list<USB::VolumeList>(volume_list)->get_parent()->get_cache_id().get_raw_id() == devices_list_id_.get_raw_id());
+            msg_log_assert(volume_list.get_raw_id() != devices_list_id_.get_raw_id());
+            msg_log_assert(lt_manager_.lookup_list<USB::VolumeList>(volume_list)->get_parent()->get_cache_id().get_raw_id() == devices_list_id_.get_raw_id());
 
             (void)lt_manager_.purge_subtree(volume_list, ID::List(), nullptr);
         }

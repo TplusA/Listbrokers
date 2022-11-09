@@ -107,7 +107,7 @@ ID::List enter_child_template(ContainingListType *const this_ptr,
 
     error = ListError::OK;
 
-    log_assert(cache.lookup(this_ptr->get_cache_id()) != nullptr);
+    msg_log_assert(cache.lookup(this_ptr->get_cache_id()) != nullptr);
 
     if(item.get_raw_id() >= this_ptr->size())
     {
@@ -122,7 +122,7 @@ ID::List enter_child_template(ContainingListType *const this_ptr,
 
         if(use_cached(cached_child_id))
         {
-            log_assert(cached_child_id.is_valid());
+            msg_log_assert(cached_child_id.is_valid());
             return cached_child_id;
         }
 

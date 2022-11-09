@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -27,6 +27,7 @@
 #include "messages.h"
 
 #include <memory>
+#include <array>
 #include <map>
 #include <vector>
 #include <functional>
@@ -160,7 +161,7 @@ class AgingListEntry
 
     void last_use_at(const Timebase::time_point &tp)
     {
-        log_assert(tp <= timebase->now());
+        msg_log_assert(tp <= timebase->now());
         last_used_ = tp;
     }
 
@@ -358,7 +359,7 @@ class Entry
      */
     void del_child()
     {
-        log_assert(children_count_ > 0);
+        msg_log_assert(children_count_ > 0);
         --children_count_;
     }
 
@@ -523,13 +524,13 @@ class CacheLimits
         high_watermark_((uint64_t(hard_upper_limit) * uint64_t(high_permil) + 500UL) / 1000UL),
         low_watermark_((uint64_t(hard_upper_limit) * uint64_t(low_permil) + 500UL) / 1000UL)
     {
-        log_assert(hard_upper_limit > 0U);
-        log_assert(high_permil <= 1000U);
-        log_assert(low_permil <= 1000U);
-        log_assert(high_permil > low_permil);
+        msg_log_assert(hard_upper_limit > 0U);
+        msg_log_assert(high_permil <= 1000U);
+        msg_log_assert(low_permil <= 1000U);
+        msg_log_assert(high_permil > low_permil);
 
-        log_assert(hard_upper_limit_ >= high_watermark_);
-        log_assert(high_watermark_ > low_watermark_);
+        msg_log_assert(hard_upper_limit_ >= high_watermark_);
+        msg_log_assert(high_watermark_ > low_watermark_);
     }
 
     bool exceeds_soft(size_t value) const

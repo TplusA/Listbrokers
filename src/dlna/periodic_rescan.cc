@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2019, 2020, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -47,7 +47,7 @@ gboolean UPnP::PeriodicRescan::rescan_now()
     if(iface == nullptr)
     {
         /* glitch, should never happen (TM) */
-        BUG("Should perform UPnP rescan, but have no D-Bus connection to dLeyna");
+        MSG_BUG("Should perform UPnP rescan, but have no D-Bus connection to dLeyna");
         return G_SOURCE_REMOVE;
     }
 
@@ -75,7 +75,7 @@ void UPnP::PeriodicRescan::enable()
 
     if(timeout_id_ > 0)
     {
-        BUG("Already enabled");
+        MSG_BUG("Already enabled");
         return;
     }
 
@@ -94,7 +94,7 @@ void UPnP::PeriodicRescan::disable()
 
     if(timeout_id_ == 0)
     {
-        BUG("Already disabled");
+        MSG_BUG("Already disabled");
         return;
     }
 

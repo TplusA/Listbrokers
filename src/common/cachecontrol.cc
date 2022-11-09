@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -36,7 +36,7 @@ LRU::CacheControl::~CacheControl()
 static gboolean trampoline(gpointer user_data)
 {
     auto ctrl = static_cast<LRU::CacheControl *>(user_data);
-    log_assert(ctrl != nullptr);
+    msg_log_assert(ctrl != nullptr);
 
     ctrl->trigger_gc();
 
@@ -45,7 +45,7 @@ static gboolean trampoline(gpointer user_data)
 
 void LRU::CacheControl::trigger_gc()
 {
-    log_assert(loop_ != NULL);
+    msg_log_assert(loop_ != NULL);
 
     msg_info("Garbage collection triggered");
     gc_and_set_timeout();
@@ -85,7 +85,7 @@ void LRU::CacheControl::set_timeout(std::chrono::seconds timeout)
     msg_info("Garbage collection timeout %u ms", source_timeout_ms);
 
     timeout_source_ = g_timeout_source_new(source_timeout_ms);
-    log_assert(timeout_source_ != NULL);
+    msg_log_assert(timeout_source_ != NULL);
 
     g_source_set_callback(timeout_source_, trampoline, this, NULL);
     timeout_source_id_ = g_source_attach(timeout_source_, NULL);
@@ -93,7 +93,7 @@ void LRU::CacheControl::set_timeout(std::chrono::seconds timeout)
 
 void LRU::CacheControl::enable_garbage_collection()
 {
-    log_assert(loop_ != NULL);
+    msg_log_assert(loop_ != NULL);
 
     is_enabled_ = true;
 

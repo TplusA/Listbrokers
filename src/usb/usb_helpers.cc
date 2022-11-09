@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -42,10 +42,10 @@ void USB::Helpers::init(USB::ListTree &lt, const ::LRU::Cache &cache)
 
 std::shared_ptr<const USB::DeviceList> USB::Helpers::get_list_of_usb_devices()
 {
-    log_assert(usb_helpers_list_tree_pointer != nullptr);
+    msg_log_assert(usb_helpers_list_tree_pointer != nullptr);
 
     auto id = usb_helpers_list_tree_pointer->get_root_list_id();
-    log_assert(id.is_valid());
+    msg_log_assert(id.is_valid());
 
     return std::static_pointer_cast<const USB::DeviceList>(usb_helpers_lru_pointer->lookup(id));
 }
@@ -55,11 +55,11 @@ bool USB::Helpers::construct_fspath_to_item(const DirList &list,
                                             std::string &path,
                                             const char *prefix)
 {
-    log_assert(usb_helpers_list_tree_pointer != nullptr);
-    log_assert(item_id.is_valid());
+    msg_log_assert(usb_helpers_list_tree_pointer != nullptr);
+    msg_log_assert(item_id.is_valid());
 
     const size_t list_depth = LRU::Entry::depth(list);
-    log_assert(list_depth > 2);
+    msg_log_assert(list_depth > 2);
 
     const DirList *dir_list_ptr = nullptr;
     std::shared_ptr<const LRU::Entry> lru_entry;
@@ -77,8 +77,8 @@ bool USB::Helpers::construct_fspath_to_item(const DirList &list,
         if(!usb_helpers_list_tree_pointer->get_parent_link(dir_list_ptr->get_cache_id(),
                                                            item_id, lru_entry))
         {
-            BUG("Item %u in list %u has no parent (but it must have)",
-                item_id.get_raw_id(), dir_list_ptr->get_cache_id().get_raw_id());
+            MSG_BUG("Item %u in list %u has no parent (but it must have)",
+                    item_id.get_raw_id(), dir_list_ptr->get_cache_id().get_raw_id());
             return false;
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2018, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2018, 2019, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -29,7 +29,7 @@
 
 std::string UPnP::get_proxy_object_path(tdbusdleynaserverMediaDevice *proxy)
 {
-    log_assert(proxy != nullptr);
+    msg_log_assert(proxy != nullptr);
 
     return std::string(g_dbus_proxy_get_object_path(G_DBUS_PROXY(proxy)));
 }
@@ -37,7 +37,7 @@ std::string UPnP::get_proxy_object_path(tdbusdleynaserverMediaDevice *proxy)
 bool UPnP::proxy_object_path_equals(tdbusdleynaserverMediaDevice *proxy,
                                     const std::string &path)
 {
-    log_assert(proxy != nullptr);
+    msg_log_assert(proxy != nullptr);
 
     return path == g_dbus_proxy_get_object_path(G_DBUS_PROXY(proxy));
 }

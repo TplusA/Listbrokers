@@ -40,7 +40,7 @@ void USB::ListTree::reinsert_volume_list(uint16_t device_id, uint32_t volume_num
 
     if(device_list_ptr == nullptr)
     {
-        BUG("No device list, cannot reinsert volume list");
+        MSG_BUG("No device list, cannot reinsert volume list");
         return;
     }
 
@@ -52,7 +52,7 @@ void USB::ListTree::reinsert_volume_list(uint16_t device_id, uint32_t volume_num
 
     if(item_data == nullptr)
     {
-        BUG("No device data for device ID %u while reinserting volume list",
+        MSG_BUG("No device data for device ID %u while reinserting volume list",
             device_id);
         return;
     }
@@ -99,8 +99,8 @@ void USB::ListTree::reinsert_volume_list(uint16_t device_id, uint32_t volume_num
 static bool is_volume_list_or_invalid(const ListTreeManager &lt_manager,
                                       ID::List root_id, ID::List list_id)
 {
-    log_assert(root_id.is_valid());
-    log_assert(list_id.is_valid());
+    msg_log_assert(root_id.is_valid());
+    msg_log_assert(list_id.is_valid());
 
     const ID::List parent_id = lt_manager.get_parent_list_id(list_id);
 
@@ -112,7 +112,7 @@ void USB::ListTree::pre_main_loop()
     lt_manager_.announce_root_list(devices_list_id_);
 
     auto devices = lt_manager_.lookup_list<USB::DeviceList>(devices_list_id_);
-    log_assert(devices != nullptr);
+    msg_log_assert(devices != nullptr);
 
     if(devices->init_from_mounta())
         reinsert_device_list();
@@ -305,8 +305,8 @@ bool USB::ListTree::get_parent_link(ID::List list_id, ID::Item &parent_item_id,
            : std::static_pointer_cast<const USB::DirList>(parent_list)->lookup_item_id_by_child_id(list_id, parent_item_id));
 
     if(!ok)
-        BUG("Failed to find item in list %u linking to child list %u",
-            parent_list->get_cache_id().get_raw_id(), list_id.get_raw_id());
+        MSG_BUG("Failed to find item in list %u linking to child list %u",
+                parent_list->get_cache_id().get_raw_id(), list_id.get_raw_id());
 
     return ok;
 }
@@ -372,16 +372,16 @@ static bool get_component_name(const USB::ListTree &lt,
 
     if(!process(*list, item_id))
     {
-        BUG("Item %u in %s list %u has no name",
-            item_id.get_raw_id(), what, list->get_cache_id().get_raw_id());
+        MSG_BUG("Item %u in %s list %u has no name",
+                item_id.get_raw_id(), what, list->get_cache_id().get_raw_id());
         error = ListError::INTERNAL;
         return false;
     }
 
     if(!lt.get_parent_link(list->get_cache_id(), item_id, lru_entry))
     {
-        BUG("Item %u in %s list %u has no parent",
-            item_id.get_raw_id(), what, list->get_cache_id().get_raw_id());
+        MSG_BUG("Item %u in %s list %u has no parent",
+                item_id.get_raw_id(), what, list->get_cache_id().get_raw_id());
         error = ListError::INTERNAL;
         return false;
     }
@@ -800,7 +800,7 @@ ListError USB::ListTree::realize_strbo_url(const std::string &url,
     {
         if(!error.failed())
         {
-            BUG("Failed handling URL, but no error is set");
+            MSG_BUG("Failed handling URL, but no error is set");
             error = ListError(ListError::INTERNAL);
         }
     }
@@ -930,7 +930,7 @@ USB::ListTree::get_location_key(const ID::List list_id, const ID::RefPos item_po
     }
 
     /* device */
-    log_assert(list_depth == 1);
+    msg_log_assert(list_depth == 1);
 
     if(!get_component_name<DeviceList>(*this, lt_manager_, lru_entry,
             list_id, current_item_id, error, "device",
@@ -1096,7 +1096,7 @@ USB::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
     }
 
     /* device */
-    log_assert(list_depth == 1);
+    msg_log_assert(list_depth == 1);
 
     if(!get_component_name<DeviceList>(*this, lt_manager_, lru_entry,
             list_id, current_item_id, error, "device",

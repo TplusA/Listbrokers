@@ -181,7 +181,7 @@ ssize_t UPnP::DBusUPnPFiller::fill(ItemProvider<UPnP::ItemData> &item_provider,
 {
     error = ListError::OK;
 
-    log_assert(cache_ != nullptr);
+    msg_log_assert(cache_ != nullptr);
 
     /*!
      * \bug There should be a hot D-Bus proxy object for the most recently
@@ -261,7 +261,7 @@ ssize_t UPnP::DBusUPnPFiller::fill(ItemProvider<UPnP::ItemData> &item_provider,
             /* one output parameter per child: array of dictionaries of
              * string/variant pairs */
             GVariant *child_data = g_variant_get_child_value(children, retval);
-            log_assert(child_data != nullptr);
+            msg_log_assert(child_data != nullptr);
 
             UPnP::ItemData *item = item_provider.next();
             error = fill_list_item_from_upnp_data(std::move(*item), child_data);

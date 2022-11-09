@@ -68,7 +68,7 @@ class ListTree: public ListTreeIface
     {
         server_list_id_ =
             lt_manager_.allocate_blessed_list<UPnP::ServerList>(nullptr, 0, 0, true);
-        log_assert(server_list_id_.is_valid());
+        msg_log_assert(server_list_id_.is_valid());
     }
 
     void pre_main_loop() override
@@ -107,7 +107,7 @@ class ListTree: public ListTreeIface
      */
     void list_discarded_from_cache(ID::List id)
     {
-        log_assert(id != server_list_id_);
+        msg_log_assert(id != server_list_id_);
         lt_manager_.list_discarded_from_cache(id);
     }
 

@@ -24,6 +24,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <cppcutter.h>
+#include <array>
 #include <tuple>
 #include <stack>
 
