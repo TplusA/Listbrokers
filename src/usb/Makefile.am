@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2017, 2019--2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2017, 2019--2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -89,6 +89,7 @@ strbo_lb_usb_LDADD = \
     ../common/liblru.la \
     ../common/libcacheable.la \
     ../common/libdbus_lists_handlers.la \
+    ../common/libdbus_asyncwork.la \
     ../common/liblisttree.la \
     ../common/libdebug_dbus.la \
     ../common/liberrors_dbus.la \

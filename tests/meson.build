@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -53,7 +53,7 @@ listtree_upnp_tests = shared_module('test_listtree_upnp',
     cpp_args: ['-Wno-pedantic', '-Wno-clobbered'],
     include_directories: ['../src/common', '../src/dlna', '../dbus_interfaces'],
     dependencies: [cutter_dep, glib_deps],
-    link_with: [lru_lib, upnp_list_lib, listtree_lib]
+    link_with: [lru_lib, upnp_list_lib, listtree_lib, dbus_asyncwork_lib]
 )
 test('UPnP List Tree',
     cutter_wrap, args: [cutter_wrap_args, listtree_upnp_tests.full_path()],

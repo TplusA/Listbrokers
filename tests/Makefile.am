@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015, 2017--2020  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015, 2017--2020, 2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -84,6 +84,7 @@ test_listtree_upnp_la_SOURCES = \
 test_listtree_upnp_la_LIBADD = \
     $(top_builddir)/src/common/liblru.la \
     $(top_builddir)/src/common/liblisttree.la \
+    $(top_builddir)/src/common/libdbus_asyncwork.la \
     $(top_builddir)/src/dlna/libupnp_list.la
 test_listtree_upnp_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_srcdir)/src/dlna -I$(top_builddir)/src/dlna
 test_listtree_upnp_la_CFLAGS = $(AM_CFLAGS) $(LISTBROKER_DEPENDENCIES_CFLAGS)

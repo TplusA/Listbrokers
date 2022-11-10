@@ -35,6 +35,7 @@ noinst_LTLIBRARIES = \
     libstrbourl.la \
     liblisttree.la \
     libcacheable.la \
+    libdbus_asyncwork.la \
     libdbus_lists_handlers.la \
     libdbus_lists_iface.la \
     libdbus_artcache_iface.la \
@@ -57,6 +58,13 @@ libstrbourl_la_SOURCES = \
     messages.h
 libstrbourl_la_CFLAGS = $(AM_CFLAGS)
 libstrbourl_la_CXXFLAGS = $(AM_CXXFLAGS)
+
+libdbus_asyncwork_la_SOURCES = \
+    dbus_async_workqueue.hh dbus_async_workqueue.cc \
+    dbus_async_work.hh dbus_async_work.cc \
+    work_by_cookie.hh work_by_cookie.cc
+libdbus_asyncwork_la_CFLAGS = $(AM_CFLAGS)
+libdbus_asyncwork_la_CXXFLAGS = $(AM_CXXFLAGS)
 
 libdbus_lists_handlers_la_SOURCES = \
     dbus_lists_handlers.cc dbus_lists_handlers.hh \
@@ -83,8 +91,7 @@ libdbus_artcache_iface_la_CXXFLAGS = $(AM_CXXFLAGS)
 liblisttree_la_SOURCES = \
     listtree_manager.cc listtree_manager.hh \
     cacheable.hh \
-    dbus_async_workqueue.cc dbus_async_workqueue.hh \
-    dbus_async_work.cc dbus_async_work.hh \
+    dbus_async_workqueue.hh dbus_async_work.hh \
     logged_lock.hh \
     listtree.hh idtypes.hh \
     $(DBUS_IFACES)/de_tahifi_lists_context.h

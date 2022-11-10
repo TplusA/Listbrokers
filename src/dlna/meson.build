@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2020, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -90,6 +90,7 @@ executable(
         dbus_artcache_iface_lib,
         dbus_lists_handlers_lib,
         dbus_lists_iface_lib,
+        dbus_asyncwork_lib,
         dbus_error_messages_lib,
         dbus_upnp_handlers_lib,
         dbus_upnp_helpers_lib,

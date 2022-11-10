@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2021  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -76,7 +76,7 @@ strbourl_lib = static_library('strbourl',
 )
 
 listtree_lib = static_library('listtree',
-    ['listtree_manager.cc', 'dbus_async_workqueue.cc', 'dbus_async_work.cc'],
+    'listtree_manager.cc',
     include_directories: dbus_iface_defs_includes,
     dependencies: [glib_deps, dbus_common_deps],
 )
@@ -85,6 +85,12 @@ cacheable_lib = static_library('cacheable',
     'cacheable.cc',
     include_directories: dbus_iface_defs_includes,
     dependencies: config_h,
+)
+
+dbus_asyncwork_lib = static_library('dbus_asyncwork',
+    ['dbus_async_workqueue.cc', 'dbus_async_work.cc', 'work_by_cookie.cc'],
+    include_directories: dbus_iface_defs_includes,
+    dependencies: [glib_deps, dbus_common_deps],
 )
 
 dbus_lists_handlers_lib = static_library('dbus_lists_handlers',
