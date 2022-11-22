@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019, 2021  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -79,6 +79,11 @@ class WorkQueue
         LoggedLock::configure(lock_, "DBusAsync::WorkQueue", MESSAGE_LEVEL_DEBUG);
         LoggedLock::configure(work_finished_, "DBusAsync::WorkQueue-cv",
                               MESSAGE_LEVEL_DEBUG);
+    }
+
+    ~WorkQueue()
+    {
+        this->shutdown();
     }
 
     /*!

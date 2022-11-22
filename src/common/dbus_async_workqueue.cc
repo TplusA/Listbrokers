@@ -30,6 +30,10 @@ void DBusAsync::WorkQueue::shutdown()
     LOGGED_LOCK_CONTEXT_HINT;
     LoggedLock::UniqueLock<LoggedLock::Mutex> qlock(lock_);
 
+    /* do this only once */
+    if(!is_accepting_work_)
+        return;
+
     is_accepting_work_ = false;
     cancel_all_work();
 
