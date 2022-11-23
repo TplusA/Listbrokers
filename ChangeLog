@@ -1,3 +1,12 @@
+2022-11-23  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.10 released.
+
+	* Stability: Avoid crash when running with option --help.
+
+	* Misc: Refactorings, upgrade for gcc 12.2.0, and other internal
+	  changes.
+
 2022-10-14  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.9 released.
