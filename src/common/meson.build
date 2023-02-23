@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2021, 2022, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -39,18 +39,22 @@ dbus_iface_data = [
     ['de_tahifi_errors',   'de.tahifi.',          'tdbus',          'Error Messages'],
 ]
 
+dbus_common_headers = []
 dbus_common_deps = []
 
 foreach d : dbus_iface_data
-    dbus_common_deps += declare_dependency(
-        link_with: static_library(
-            d[0].split('_')[-1] + '_dbus',
-            gnome.gdbus_codegen(d[0],
+    codegen = gnome.gdbus_codegen(d[0],
                                 sources: dbus_iface_dir / d[0] + '.xml',
                                 interface_prefix: d[1],
-                                namespace: d[2]),
+                                namespace: d[2])
+    dbus_common_headers += codegen[1]
+
+    dbus_common_deps += declare_dependency(
+        link_with: static_library(
+            d[0].split('_')[-1] + '_dbus', codegen,
             dependencies: [glib_deps, config_h],
-            c_args: relaxed_dbus_warnings),
+            c_args: relaxed_dbus_warnings
+        ),
         include_directories: dbus_iface_defs_includes
     )
 
@@ -61,6 +65,8 @@ foreach d : dbus_iface_data
             extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
             '-c', d[2], '-s', d[1], '-n', d[3]
         ])
+
+    codegen = []
 endforeach
 
 lru_lib = static_library('lru',
@@ -76,7 +82,7 @@ strbourl_lib = static_library('strbourl',
 )
 
 listtree_lib = static_library('listtree',
-    'listtree_manager.cc',
+    ['listtree_manager.cc', dbus_common_headers],
     include_directories: dbus_iface_defs_includes,
     dependencies: [glib_deps, dbus_common_deps],
 )
@@ -100,23 +106,23 @@ dbus_lists_handlers_lib = static_library('dbus_lists_handlers',
 )
 
 debug_dbus_lib = static_library('debug_dbus_more',
-    ['dbus_debug_levels.cc', 'messages_dbus.c'],
+    ['dbus_debug_levels.cc', 'messages_dbus.c', dbus_common_headers],
     dependencies: [glib_deps, dbus_common_deps],
 )
 
 dbus_error_messages_lib = static_library('dbus_errors_iface',
-    ['dbus_error_messages.cc'],
+    ['dbus_error_messages.cc', dbus_common_headers],
     dependencies: [glib_deps, dbus_common_deps],
 )
 
 dbus_lists_iface_lib = static_library('dbus_lists_iface',
-    'dbus_lists_iface.cc',
+    ['dbus_lists_iface.cc', dbus_common_headers],
     include_directories: dbus_iface_defs_includes,
     dependencies: [glib_deps, config_h],
 )
 
 dbus_artcache_iface_lib = static_library('dbus_artcache_iface',
-    'dbus_artcache_iface.cc',
+    ['dbus_artcache_iface.cc', dbus_common_headers],
     dependencies: [glib_deps, dbus_common_deps],
 )
 

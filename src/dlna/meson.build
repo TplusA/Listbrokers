@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2019, 2020, 2021, 2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2019, 2020, 2021, 2022, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -24,18 +24,22 @@ dbus_iface_data = [
     ['org_gnome_upnp',         'org.gnome.UPnP.',         'tdbus_upnp',         'DLNA Access'],
 ]
 
+dbus_dlna_headers = []
 dbus_dlna_deps = []
 
 foreach d : dbus_iface_data
-    dbus_dlna_deps += declare_dependency(
-        link_with: static_library(
-            d[0].split('_')[-1] + '_dbus',
-            gnome.gdbus_codegen(d[0],
+    codegen = gnome.gdbus_codegen(d[0],
                                 sources: dbus_iface_dir / d[0] + '.xml',
                                 interface_prefix: d[1],
-                                namespace: d[2]),
+                                namespace: d[2])
+    dbus_dlna_headers += codegen[1]
+
+    dbus_dlna_deps += declare_dependency(
+        link_with: static_library(
+            d[0].split('_')[-1] + '_dbus', codegen,
             dependencies: [glib_deps, config_h],
-            c_args: relaxed_dbus_warnings),
+            c_args: relaxed_dbus_warnings
+        ),
         include_directories: dbus_iface_defs_includes
     )
 
@@ -46,10 +50,12 @@ foreach d : dbus_iface_data
             extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
             '-c', d[2], '-s', d[1], '-n', d[3]
         ])
+
+    codegen = []
 endforeach
 
 upnp_list_lib = static_library('upnp_list',
-    ['upnp_list.cc', 'upnp_listtree.cc'],
+    ['upnp_list.cc', 'upnp_listtree.cc', dbus_dlna_headers],
     include_directories: dbus_iface_defs_includes,
     dependencies: [glib_deps, config_h])
 
@@ -59,7 +65,7 @@ dbus_upnp_handlers_lib = static_library('dbus_upnp_handlers',
     dependencies: [glib_deps, config_h])
 
 dbus_upnp_helpers_lib = static_library('dbus_upnp_helpers',
-    ['dbus_upnp_helpers.cc', 'dbus_upnp_list_filler.cc'],
+    ['dbus_upnp_helpers.cc', 'dbus_upnp_list_filler.cc', dbus_dlna_headers],
     include_directories: dbus_iface_defs_includes,
     dependencies: [glib_deps, config_h])
 
