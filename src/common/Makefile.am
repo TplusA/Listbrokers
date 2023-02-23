@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2019, 2021--2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -171,7 +171,7 @@ de_tahifi_errors.c: de_tahifi_errors.stamp
 de_tahifi_errors.h: de_tahifi_errors.stamp
 de_tahifi_errors.stamp: $(DBUS_IFACES)/de_tahifi_errors.xml
 	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_errors --c-namespace tdbus --interface-prefix de.tahifi. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_errors-doc.md -H de_tahifi_errors-doc.h -c tdbus -s de.tahifi.. -n "$(PACKAGE_NAME) (cover art)"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_errors-doc.md -H de_tahifi_errors-doc.h -c tdbus -s de.tahifi. -n "$(PACKAGE_NAME) (cover art)"
 	touch $@
 
 de_tahifi_debug-doc.h: de_tahifi_debug.stamp
