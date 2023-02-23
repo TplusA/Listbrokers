@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019--2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019--2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -167,6 +167,9 @@ static ListError io_error_to_list_error(const GErrorWrapper &gerror)
           case G_IO_ERROR_HOST_UNREACHABLE:
           case G_IO_ERROR_NETWORK_UNREACHABLE:
           case G_IO_ERROR_PROXY_FAILED:
+#if GLIB_CHECK_VERSION(2, 74, 0)
+          case G_IO_ERROR_NO_SUCH_DEVICE:
+#endif /*  */
             return ListError(ListError::NET_IO);
         }
     }
