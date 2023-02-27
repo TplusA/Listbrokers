@@ -430,19 +430,22 @@ class CookieJar
              * after the fact */
 
             LOGGED_LOCK_CONTEXT_HINT;
-            static_cast<DBusAsync::Work *>(work.get())->
+            if(!static_cast<DBusAsync::Work *>(work.get())->
                 with_reply_path_tracker<bool>(
                     [this, &jar_lock, cookie, &on_timeout]
                     (auto &work_lock, auto &rpt)
                     {
                         return this->try_eat_quickly(jar_lock, cookie,
                                                      on_timeout, work_lock, rpt);
-                    });
+                    }))
+            {
+                /* slow path, so re-throw the timeout error */
+                throw;
+            }
 
-            /* function has not re-thrown, which means our work has completed
-             * just in this moment and its result is available, ready for
-             * processing on the fast path; jar lock is still taken at this
-             * point */
+            /* our work has completed just in this moment and its result is
+             * available, ready for processing on the fast path; jar lock is
+             * still taken at this point */
             LOGGED_LOCK_CONTEXT_HINT;
             auto result(work->take_result_from_fast_path());
             work_by_cookie_.erase(cookie);
@@ -524,7 +527,7 @@ class CookieJar
         if(!rpt.slow_path_cookie_sent_to_client(work_lock))
             MSG_BUG("Bad reply path tracker state");
 
-        throw;
+        return false;
     }
 
     /*!
