@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019, 2021, 2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019, 2021--2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -38,7 +38,12 @@ ssize_t (*os_read)(int fd, void *dest, size_t count) = read;
 ssize_t (*os_write)(int fd, const void *buf, size_t count) = write;
 
 #if LOGGED_LOCKS_ENABLED && LOGGED_LOCKS_THREAD_CONTEXTS
+bool LoggedLock::log_messages_enabled = true;
+LoggedLock::Mutex LoggedLock::MutexTraits<LoggedLock::Mutex>::dummy_for_default_ctor_;
+LoggedLock::RecMutex LoggedLock::MutexTraits<LoggedLock::RecMutex>::dummy_for_default_ctor_;
+#if LOGGED_LOCKS_THREAD_CONTEXTS
 thread_local LoggedLock::Context LoggedLock::context;
+#endif
 #endif
 
 static GMainLoop *create_glib_main_loop()
