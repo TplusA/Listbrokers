@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2022, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -422,74 +422,31 @@ class CookieJar
         }
         catch(const TimeoutError &)
         {
-            /* at this point, before the cookie jar lock can be acquired, the
-             * work may have just completed in the background; we need to check
-             * if taking the slow path is still possible or if we have timed
-             * out after the fact */
+            /* the work may have just completed in the background at this
+             * point, before the work and cookie jar locks could be
+             * re-acquired (and it is necessary to take the work lock *before*
+             * taking the jar lock to avoid deadlocks); we need to check if
+             * taking the slow path is still possible or if we have timed out
+             * after the fact */
 
             LOGGED_LOCK_CONTEXT_HINT;
-            const auto take_path_result =
-                static_cast<DBusAsync::Work *>(work.get())->
-                    with_reply_path_tracker<DBusAsync::ReplyPathTracker::TakePathResult>(
-                        [] (auto &work_lock, auto &rpt)
-                        { return rpt.try_take_slow_path(work_lock); });
+            static_cast<DBusAsync::Work *>(work.get())->
+                with_reply_path_tracker<bool>(
+                    [this, &jar_lock, cookie, &on_timeout]
+                    (auto &work_lock, auto &rpt)
+                    {
+                        return this->try_eat_quickly(jar_lock, cookie,
+                                                     on_timeout, work_lock, rpt);
+                    });
 
-            switch(take_path_result)
-            {
-              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_FAST_PATH:
-                {
-                    /* work has completed just in this moment and its result is
-                     * available, ready for processing on the fast path */
-                    LOGGED_LOCK_CONTEXT_HINT;
-                    auto result(work->take_result_from_fast_path());
-                    LOGGED_LOCK_CONTEXT_HINT;
-                    jar_lock.lock();
-                    work_by_cookie_.erase(cookie);
-                    return result;
-                }
-
-              case DBusAsync::ReplyPathTracker::TakePathResult::TAKEN:
-                /* OK, so we are taking the slow path here and announce the
-                 * cookie to the D-Bus client; the #DBusAsync::ReplyPathTracker
-                 * is taking care of correct ordering so that the done
-                 * notification cannot emit the result before we have announced
-                 * the cookie */
-                break;
-
-              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET:
-                MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 1)");
-                break;
-
-              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED:
-                MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 2)");
-                break;
-
-              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED:
-                MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 3)");
-                break;
-
-              case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING:
-                break;
-
-              case DBusAsync::ReplyPathTracker::TakePathResult::INVALID:
-                MSG_BUG("Requesting slow path due to timeout, but this is an invalid transition");
-                break;
-            }
-
-            jar_lock.lock();
-
-            if(on_timeout != nullptr)
-                on_timeout(cookie);
-
-            jar_lock.unlock();
-
+            /* function has not re-thrown, which means our work has completed
+             * just in this moment and its result is available, ready for
+             * processing on the fast path; jar lock is still taken at this
+             * point */
             LOGGED_LOCK_CONTEXT_HINT;
-            if(!static_cast<DBusAsync::Work *>(work.get())->with_reply_path_tracker<bool>(
-                    [] (auto &work_lock, auto &rpt)
-                    { return rpt.slow_path_cookie_sent_to_client(work_lock); }))
-                MSG_BUG("Bad reply path tracker state");
-
-            throw;
+            auto result(work->take_result_from_fast_path());
+            work_by_cookie_.erase(cookie);
+            return result;
         }
         catch(...)
         {
@@ -503,6 +460,73 @@ class CookieJar
     }
 
   private:
+    bool try_eat_quickly(LoggedLock::UniqueLock<LoggedLock::Mutex> &jar_lock,
+                         uint32_t cookie,
+                         const std::function<void(uint32_t)> &on_timeout,
+                         LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock,
+                         ReplyPathTracker &rpt)
+    {
+        LOGGED_LOCK_CONTEXT_HINT;
+        jar_lock.lock();
+
+        const auto take_path_result = rpt.try_take_slow_path();
+
+        switch(take_path_result)
+        {
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_FAST_PATH:
+            /* nice, we are done already; DO NOT UNLOCK THE JAR LOCK! */
+            return true;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::TAKEN:
+            /*
+             * OK, so we are taking the slow path here and announce the cookie
+             * to the D-Bus client; the #DBusAsync::ReplyPathTracker is taking
+             * care of correct ordering so that the done notification cannot
+             * emit the result before we have announced the cookie.
+             *
+             * It is *still* possible for the work to complete at this time or
+             * a millisecond later, very shortly after we have made the
+             * decision to take the slow path. This is OK, though, because
+             * #DBusAsync::CookieJar::work_done_notification() will have to
+             * wait for the jar lock which protects our effort below of sending
+             * the cookie to the client, which that function will need to send
+             * a notification.
+             *
+             * This would be bad luck because we'll waste some time on the
+             * cookie round trip, but it's entirely possible and valid.
+             */
+            break;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_NOT_ANNOUNCED_YET:
+            MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 1)");
+            break;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_COOKIE_ANNOUNCED:
+            MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 2)");
+            break;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_READY_ANNOUNCED:
+            MSG_BUG("Requesting slow path due to timeout, but already taking slow path (phase 3)");
+            break;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::ALREADY_ON_SLOW_PATH_FETCHING:
+            break;
+
+          case DBusAsync::ReplyPathTracker::TakePathResult::INVALID:
+            MSG_BUG("Requesting slow path due to timeout, but this is an invalid transition");
+            break;
+        }
+
+        if(on_timeout != nullptr)
+            on_timeout(cookie);
+
+        LOGGED_LOCK_CONTEXT_HINT;
+        if(!rpt.slow_path_cookie_sent_to_client(work_lock))
+            MSG_BUG("Bad reply path tracker state");
+
+        throw;
+    }
+
     /*!
      * Callback for letting us know that some work item is done.
      *

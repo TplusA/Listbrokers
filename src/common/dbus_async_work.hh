@@ -128,7 +128,7 @@ class ReplyPathTracker
         return TakePathResult::INVALID;
     }
 
-    TakePathResult try_take_slow_path(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock)
+    TakePathResult try_take_slow_path()
     {
         switch(reply_path_)
         {
