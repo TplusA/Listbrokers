@@ -24,6 +24,7 @@
 
 #include "logged_lock.hh"
 #include "messages.h"
+#include "dump_enum_value.hh"
 
 #include <memory>
 #include <functional>
@@ -60,6 +61,7 @@ class ReplyPathTracker
         SLOW_PATH_COOKIE_SENT,    /*!< Almost surely running, slow path cookie was announced */
         SLOW_PATH_READY_NOTIFIED, /*!< Done, slow path cookie ready notification sent */
         SLOW_PATH_FETCHING,       /*!< Done, client is fetching the slow path result */
+        LAST_VALUE = SLOW_PATH_FETCHING,
     };
 
     ReplyPath reply_path_;
@@ -264,14 +266,18 @@ class Work
         DONE,      /*!< Finished work, result is available. */
         CANCELING, /*!< Cancellation in progress. */
         CANCELED,  /*!< Canceled work, no result available. */
+        LAST_VALUE = CANCELED,
     };
 
     const std::string &name_;
 
   private:
     static std::atomic_uint next_free_idx_;
-    unsigned int idx_;
 
+  public:
+    const unsigned int idx_;
+
+  private:
     /*! Current work item state. */
     State state_;
 
@@ -510,30 +516,50 @@ class Work
     virtual void do_cancel(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock) = 0;
 
   private:
-    void set_work_state(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock, State state)
+    void set_work_state(LoggedLock::UniqueLock<LoggedLock::Mutex> &work_lock,
+                        State state)
     {
+        static const std::array<const char *const, 5> names
+        {
+            "RUNNABLE",
+            "RUNNING",
+            "DONE",
+            "CANCELING",
+            "CANCELED",
+        };
+
         if(state == state_)
             return;
+
+        auto bug_if_going_to = [this, state] (const State bad_state)
+        {
+            MSG_BUG_IF(state == bad_state,
+                       "Work \"%s\" [%p, %u] bad state transition %s -> %s",
+                       name_.c_str(), static_cast<const void *>(this), idx_,
+                       enum_to_string(names, state_), enum_to_string(names, state));
+        };
 
         switch(state_)
         {
           case State::RUNNABLE:
-            MSG_BUG_IF(state == State::CANCELING, "%p RUNNABLE -> CANCELING", static_cast<const void *>(this));
+            bug_if_going_to(State::CANCELING);
             break;
 
           case State::RUNNING:
-            MSG_BUG_IF(state == State::RUNNABLE, "%p RUNNING -> RUNNABLE", static_cast<const void *>(this));
+            bug_if_going_to(State::RUNNABLE);
             break;
 
           case State::CANCELING:
-            MSG_BUG_IF(state == State::RUNNABLE, "%p CANCELING -> RUNNABLE", static_cast<const void *>(this));
-            MSG_BUG_IF(state == State::RUNNING,  "%p CANCELING -> RUNNING", static_cast<const void *>(this));
-            MSG_BUG_IF(state == State::DONE,     "%p CANCELING -> DONE", static_cast<const void *>(this));
+            bug_if_going_to(State::RUNNABLE);
+            bug_if_going_to(State::RUNNING);
+            bug_if_going_to(State::DONE);
             break;
 
           case State::DONE:
           case State::CANCELED:
-            MSG_BUG("%p going from final state %d to %d", static_cast<const void *>(this), int(state_), int(state));
+            MSG_BUG("Work \"%s\" [%p, %u] going from final state %s to %s",
+                    name_.c_str(), static_cast<const void *>(this), idx_,
+                    enum_to_string(names, state_), enum_to_string(names, state));
             break;
         }
 

@@ -72,7 +72,7 @@ libdbus_lists_handlers_la_SOURCES = \
     gvariantwrapper.hh gvariantwrapper.cc \
     gerrorwrapper.hh \
     dbus_async_workqueue.hh dbus_async_work.hh \
-    logged_lock.hh \
+    logged_lock.hh dump_enum_value.hh \
     urlstring.hh i18nstring.hh ranked_stream_links.hh md5.hh \
     listtree.hh
 libdbus_lists_handlers_la_CFLAGS = $(AM_CFLAGS)
