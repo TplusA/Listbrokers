@@ -1,3 +1,16 @@
+2023-02-27  Robert Tiemann  <r.tiemann@ta-hifi.de>
+
+	* Version 5.11 released.
+
+	* dbus: Fix a race conditions in RNF calls. There was a race when the
+	  requested result suddenly becomes available after the decision was
+	  being made to handle the call as slow path call, but the cookie
+	  wasn't posted to the client yet.
+
+	* Build system: Fix some dependencies in Meson.
+
+	* Misc: Maintenance updates.
+
 2022-11-23  Robert Tiemann  <r.tiemann@ta-hifi.de>
 
 	* Version 5.10 released.
@@ -135,4 +148,4 @@
 	  can now be distributed under the terms of the GPL 3.
 
 
-Copyright 2015--2022 T+A elektroakustik GmbH & Co. KG
+Copyright 2015--2023 T+A elektroakustik GmbH & Co. KG
