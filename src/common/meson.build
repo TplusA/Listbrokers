@@ -29,8 +29,8 @@ gnome = import('gnome')
 
 dbus_docs = []
 
-dbus_iface_dir = '../../dbus_interfaces'
-dbus_iface_defs_includes = include_directories(dbus_iface_dir)
+dbus_iface_dir = meson.project_source_root() / 'dbus_interfaces'
+dbus_iface_defs_includes = include_directories('../../dbus_interfaces')
 
 dbus_iface_data = [
     ['de_tahifi_lists',    'de.tahifi.Lists.',    'tdbus_lists',    'Content Browsing'],
