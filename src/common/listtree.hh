@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015--2017, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -406,16 +407,16 @@ class ListTreeIface
     /*!
      * Generate location key URL from given position.
      */
-    virtual std::unique_ptr<Url::Location>
-    get_location_key(ID::List list_id, ID::RefPos item_pos,
+    virtual std::unique_ptr<StrBoUrl::Location>
+    get_location_key(ID::List list_id, StrBoUrl::ObjectIndex item_pos,
                      bool as_reference_key, ListError &error) const = 0;
 
     /*!
      * Generate location trace URL to given coordinates.
      */
-    virtual std::unique_ptr<Url::Location>
-    get_location_trace(ID::List list_id, ID::RefPos item_pos,
-                       ID::List ref_list_id, ID::RefPos ref_item_pos,
+    virtual std::unique_ptr<StrBoUrl::Location>
+    get_location_trace(ID::List list_id, StrBoUrl::ObjectIndex item_pos,
+                       ID::List ref_list_id, StrBoUrl::ObjectIndex ref_item_pos,
                        ListError &error) const = 0;
 
     /*!

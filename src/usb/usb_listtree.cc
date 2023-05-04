@@ -30,6 +30,7 @@
 #include "usb_listtree.hh"
 #include "strbo_url_usb.hh"
 #include "strbo_url_helpers.hh"
+#include "strbo_url_listtree_helpers.hh"
 
 constexpr const char USB::ListTree::CONTEXT_ID[];
 
@@ -702,18 +703,18 @@ static ListError realize(USB::ListTree &lt, const std::string &url,
         error = follow_path(lt, d.item_name_, dir_list_id,
                             parent_link_candidate, parent_link,
                             d.item_position_.is_valid()
-                            ? std::make_pair(ID::Item(d.item_position_.get_raw_id() - 1), 1)
+                            ? std::make_pair(ID::Item(d.item_position_.get_object_index() - 1), 1)
                             : std::make_pair(ID::Item(), 0),
                             true,
                             [&d, &result]
                             (ID::List list_id, ID::Item item_id, ListItemKind item_kind)
                             {
                                 if(d.item_position_.is_valid() &&
-                                   d.item_position_.get_raw_id() != item_id.get_raw_id() + 1)
+                                   d.item_position_.get_object_index() != item_id.get_raw_id() + 1)
                                 {
                                     msg_vinfo(MESSAGE_LEVEL_DEBUG,
                                               "Referenced item found at position %u, expected at %u",
-                                              item_id.get_raw_id() + 1, d.item_position_.get_raw_id());
+                                              item_id.get_raw_id() + 1, d.item_position_.get_object_index());
                                 }
 
                                 result.set_item_data(list_id, item_id, item_kind);
@@ -788,13 +789,13 @@ ListError USB::ListTree::realize_strbo_url(const std::string &url,
 {
     ListError error;
 
-    if(!Url::try_set_url_and_apply<USB::LocationKeySimple>(url, error,
+    if(!StrBoUrl::try_set_url_and_apply<USB::LocationKeySimple>(url, error,
             [this, &url, &result] (const USB::LocationKeySimple &key)
             { return realize(*this, url, key, result); }) &&
-       !Url::try_set_url_and_apply<USB::LocationKeyReference>(url, error,
+       !StrBoUrl::try_set_url_and_apply<USB::LocationKeyReference>(url, error,
             [this, &url, &result] (const USB::LocationKeyReference &key)
             { return realize(*this, url, key, result); }) &&
-       !Url::try_set_url_and_apply<USB::LocationTrace>(url, error,
+       !StrBoUrl::try_set_url_and_apply<USB::LocationTrace>(url, error,
             [this, &url, &result] (const USB::LocationTrace &trace)
             { return realize(*this, url, trace, result); }))
     {
@@ -812,8 +813,8 @@ ListError USB::ListTree::realize_strbo_url(const std::string &url,
     return error;
 }
 
-std::unique_ptr<Url::Location>
-USB::ListTree::get_location_key(const ID::List list_id, const ID::RefPos item_pos,
+std::unique_ptr<StrBoUrl::Location>
+USB::ListTree::get_location_key(const ID::List list_id, const StrBoUrl::ObjectIndex item_pos,
                                 bool as_reference_key, ListError &error) const
 {
     size_t list_depth = lt_manager_.get_list_depth(list_id);
@@ -841,7 +842,7 @@ USB::ListTree::get_location_key(const ID::List list_id, const ID::RefPos item_po
     }
 
     std::shared_ptr<const LRU::Entry> lru_entry;
-    ID::Item current_item_id(item_pos.get_raw_id() - 1);
+    ID::Item current_item_id(item_pos.get_object_index() - 1);
 
     if(list_depth <= 2)
     {
@@ -858,7 +859,7 @@ USB::ListTree::get_location_key(const ID::List list_id, const ID::RefPos item_po
         else
         {
             reference_key->set_reference_point("");
-            reference_key->set_item("", (list_depth == 1) ? ID::RefPos() : item_pos);
+            reference_key->set_item("", (list_depth == 1) ? StrBoUrl::ObjectIndex() : item_pos);
         }
     }
     else
@@ -961,14 +962,14 @@ USB::ListTree::get_location_key(const ID::List list_id, const ID::RefPos item_po
 }
 
 static bool handle_reference_point(ID::List list_id, ID::Item item_id,
-                                   ID::List ref_list_id, ID::RefPos ref_item_pos,
+                                   ID::List ref_list_id, StrBoUrl::ObjectIndex ref_item_pos,
                                    bool &found_reference_point,
                                    std::function<void()> action_if_found = nullptr)
 {
     if(list_id != ref_list_id)
         return true;
 
-    if(item_id.get_raw_id() + 1 != ref_item_pos.get_raw_id())
+    if(item_id.get_raw_id() + 1 != ref_item_pos.get_object_index())
     {
         msg_error(0, LOG_NOTICE, "Reference point mismatch");
         return false;
@@ -982,9 +983,9 @@ static bool handle_reference_point(ID::List list_id, ID::Item item_id,
     return true;
 }
 
-std::unique_ptr<Url::Location>
-USB::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
-                                  ID::List ref_list_id, ID::RefPos ref_item_pos,
+std::unique_ptr<StrBoUrl::Location>
+USB::ListTree::get_location_trace(ID::List list_id, StrBoUrl::ObjectIndex item_pos,
+                                  ID::List ref_list_id, StrBoUrl::ObjectIndex ref_item_pos,
                                   ListError &error) const
 {
     size_t list_depth = lt_manager_.get_list_depth(list_id);
@@ -1005,7 +1006,7 @@ USB::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
     }
 
     std::shared_ptr<const LRU::Entry> lru_entry;
-    ID::Item current_item_id(item_pos.get_raw_id() - 1);
+    ID::Item current_item_id(item_pos.get_object_index() - 1);
     bool found_reference_point = !ref_list_id.is_valid();
 
     if(list_depth <= 2)
@@ -1014,7 +1015,7 @@ USB::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
             trace->set_partition("");
 
         trace->set_reference_point("");
-        trace->set_item("", (list_depth == 1) ? ID::RefPos() : item_pos);
+        trace->set_item("", (list_depth == 1) ? StrBoUrl::ObjectIndex() : item_pos);
     }
     else
     {

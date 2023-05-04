@@ -4,3 +4,6 @@
 [submodule "strbo_common"]
 	path = strbo_common
 	url = https://github.com/TplusA/StrBo-Common.git
+[submodule "strbo_url"]
+	path = strbo_url
+	url = https://github.com/TplusA/StrBo-URL.git

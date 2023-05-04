@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015, 2018, 2019, 2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -23,6 +24,7 @@
 #define DBUS_UPNP_HELPERS_HH
 
 #include <string>
+#include <cinttypes>
 
 #include "com_intel_dleynaserver.h"
 #include "org_gnome_upnp.h"

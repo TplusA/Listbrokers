@@ -88,7 +88,7 @@ lru_lib = static_library('lru',
 )
 
 strbourl_lib = static_library('strbourl',
-    'strbo_url_common.cc',
+    'strbo_url.cc',
     include_directories: dbus_iface_defs_includes,
     dependencies: config_h,
 )

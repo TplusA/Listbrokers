@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -187,13 +187,13 @@ class ListTree: public ListTreeIface
     ListError realize_strbo_url(const std::string &url,
                                 RealizeURLResult &result) final override;
 
-    std::unique_ptr<Url::Location>
-    get_location_key(ID::List list_id, ID::RefPos item_pos, bool as_reference_key,
+    std::unique_ptr<StrBoUrl::Location>
+    get_location_key(ID::List list_id, StrBoUrl::ObjectIndex item_pos, bool as_reference_key,
                      ListError &error) const final override;
 
-    std::unique_ptr<Url::Location>
-    get_location_trace(ID::List list_id, ID::RefPos item_pos,
-                       ID::List ref_list_id, ID::RefPos ref_item_pos,
+    std::unique_ptr<StrBoUrl::Location>
+    get_location_trace(ID::List list_id, StrBoUrl::ObjectIndex item_pos,
+                       ID::List ref_list_id, StrBoUrl::ObjectIndex ref_item_pos,
                        ListError &error) const final override;
 
     /*!

@@ -390,17 +390,17 @@ ListError UPnP::ListTree::realize_strbo_url(const std::string &url,
     return ListError(ListError::INTERNAL);
 }
 
-std::unique_ptr<Url::Location>
-UPnP::ListTree::get_location_key(ID::List list_id, ID::RefPos item_pos,
+std::unique_ptr<StrBoUrl::Location>
+UPnP::ListTree::get_location_key(ID::List list_id, StrBoUrl::ObjectIndex item_pos,
                                  bool as_reference_key, ListError &error) const
 {
     MSG_BUG("%s(): not implemented", __PRETTY_FUNCTION__);
     return nullptr;
 }
 
-std::unique_ptr<Url::Location>
-UPnP::ListTree::get_location_trace(ID::List list_id, ID::RefPos item_pos,
-                                   ID::List ref_list_id, ID::RefPos ref_item_pos,
+std::unique_ptr<StrBoUrl::Location>
+UPnP::ListTree::get_location_trace(ID::List list_id, StrBoUrl::ObjectIndex item_pos,
+                                   ID::List ref_list_id, StrBoUrl::ObjectIndex ref_item_pos,
                                    ListError &error) const
 {
     MSG_BUG("%s(): not implemented", __PRETTY_FUNCTION__);

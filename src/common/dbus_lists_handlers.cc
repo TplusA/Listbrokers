@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2017, 2019--2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2017, 2019--2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -1155,9 +1155,9 @@ gboolean DBusNavlists::get_location_key(tdbuslistsNavigation *object,
         if(as_reference_key && item_id == 0)
             error = ListError::NOT_SUPPORTED;
 
-        std::unique_ptr<Url::Location> location = error.failed()
+        std::unique_ptr<StrBoUrl::Location> location = error.failed()
             ? nullptr
-            : data->listtree_.get_location_key(id, ID::RefPos(item_id),
+            : data->listtree_.get_location_key(id, StrBoUrl::ObjectIndex(item_id),
                                                as_reference_key, error);
 
         if(location != nullptr)
@@ -1179,22 +1179,22 @@ gboolean DBusNavlists::get_location_key(tdbuslistsNavigation *object,
 }
 
 class GetLocationTrace:
-    public NavListsWork<std::tuple<ListError, std::unique_ptr<Url::Location>>>
+    public NavListsWork<std::tuple<ListError, std::unique_ptr<StrBoUrl::Location>>>
 {
   private:
     static const std::string NAME;
     const ID::List list_id_;
-    const ID::RefPos item_id_;
+    const StrBoUrl::ObjectIndex item_id_;
     const ID::List ref_list_id_;
-    const ID::RefPos ref_item_id_;
+    const StrBoUrl::ObjectIndex ref_item_id_;
 
   public:
     GetLocationTrace(GetLocationTrace &&) = delete;
     GetLocationTrace &operator=(GetLocationTrace &&) = delete;
 
     explicit GetLocationTrace(ListTreeIface &listtree,
-                              ID::List list_id, ID::RefPos item_id,
-                              ID::List ref_list_id, ID::RefPos ref_item_id):
+                              ID::List list_id, StrBoUrl::ObjectIndex item_id,
+                              ID::List ref_list_id, StrBoUrl::ObjectIndex ref_item_id):
         NavListsWork(NAME, listtree),
         list_id_(list_id),
         item_id_(item_id),
@@ -1273,9 +1273,9 @@ gboolean DBusNavlists::get_location_trace(tdbuslistsNavigation *object,
         object, invocation,
         data->listtree_.q_navlists_realize_location_,
         std::make_shared<GetLocationTrace>(data->listtree_,
-                                           obj_list_id, ID::RefPos(item_id),
+                                           obj_list_id, StrBoUrl::ObjectIndex(item_id),
                                            ID::List(ref_list_id),
-                                           ID::RefPos(ref_item_id)),
+                                           StrBoUrl::ObjectIndex(ref_item_id)),
         [] (tdbuslistsNavigation *obj, GDBusMethodInvocation *inv, auto &&result)
         {
             auto p = std::move(std::get<1>(result));

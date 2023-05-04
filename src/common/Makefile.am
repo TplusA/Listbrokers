@@ -53,8 +53,8 @@ liblru_la_CFLAGS = $(AM_CFLAGS)
 liblru_la_CXXFLAGS = $(AM_CXXFLAGS)
 
 libstrbourl_la_SOURCES = \
-    strbo_url.hh strbo_url_schemes.hh strbo_url_helpers.hh \
-    strbo_url_common.cc \
+    strbo_url.cc strbo_url.hh strbo_url_schemes.hh strbo_url_helpers.hh \
+    strbo_url_listtree_helpers.hh \
     messages.h
 libstrbourl_la_CFLAGS = $(AM_CFLAGS)
 libstrbourl_la_CXXFLAGS = $(AM_CXXFLAGS)

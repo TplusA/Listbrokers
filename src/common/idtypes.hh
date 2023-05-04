@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015, 2016, 2019, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -165,13 +165,6 @@ class List
  * we confuse a list ID with an item ID.
  */
 typedef IDType_<ItemIDTraits_> Item;
-
-/*!
- * Type to use for referencing list entries by position.
- *
- * This is basically the same as #ID::Item, but starting at 1.
- */
-typedef IDType_<RefPosIDTraits_> RefPos;
 
 }
 

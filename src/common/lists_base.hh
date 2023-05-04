@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015, 2016, 2018, 2019  T+A elektroakustik GmbH & Co. KG
- * Copyright (C) 2021, 2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2021, 2022, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -38,6 +38,7 @@
 #include <deque>
 #include <atomic>
 #include <algorithm>
+#include <stdexcept>
 
 template <typename T, uint16_t> class TiledList;
 
