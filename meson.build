@@ -45,6 +45,7 @@ glib_deps = [
 autorevision = find_program('autorevision')
 markdown = find_program('markdown')
 extract_docs = find_program('dbus_interfaces/extract_documentation.py')
+combine_iface_pages = find_program('dbus_interfaces/combine_iface_pages.sh')
 doxygen = find_program('doxygen', required: false)
 
 doxyfile = configure_file(input: 'Doxyfile.in', output: 'Doxyfile',

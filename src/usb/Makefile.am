@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2017, 2019--2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2017, 2019--2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -127,19 +127,30 @@ libdbus_mounta_handlers_la_CXXFLAGS = $(CXXRELAXEDWARNINGS)
 nodist_libmounta_dbus_la_SOURCES = de_tahifi_mounta.c de_tahifi_mounta.h
 libmounta_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
+DBUS_IFACE_PAGES = \
+    de_tahifi_mounta-doc.mdp
+
 BUILT_SOURCES = \
+    all_interfaces_toc.md \
+    all_interfaces.md \
+    all_interfaces.stamp \
+    $(DBUS_IFACE_PAGES) \
     $(nodist_libmounta_dbus_la_SOURCES) \
     de_tahifi_mounta-doc.h \
-    de_tahifi_mounta-doc.md \
     de_tahifi_mounta.stamp
 
 CLEANFILES = $(BUILT_SOURCES)
 
 de_tahifi_mounta-doc.h: de_tahifi_mounta.stamp
-de_tahifi_mounta-doc.md: de_tahifi_mounta.stamp
+de_tahifi_mounta-doc.mdp: de_tahifi_mounta.stamp
 de_tahifi_mounta.c: de_tahifi_mounta.stamp
 de_tahifi_mounta.h: de_tahifi_mounta.stamp
 de_tahifi_mounta.stamp: $(DBUS_IFACES)/de_tahifi_mounta.xml
 	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_mounta --c-namespace tdbus --interface-prefix de.tahifi. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_mounta-doc.md -H de_tahifi_mounta-doc.h -c tdbus -s de.tahifi. -n "$(PACKAGE_NAME) (T+A automounter)"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_mounta-doc.mdp -H de_tahifi_mounta-doc.h -c tdbus -s de.tahifi. -n "$(PACKAGE_NAME) (T+A automounter)"
 	touch $@
+
+all_interfaces_toc.md: all_interfaces.stamp
+all_interfaces.md: all_interfaces.stamp
+all_interfaces.stamp: $(DBUS_IFACE_PAGES)
+	$(DBUS_IFACES)/combine_iface_pages.sh -toc all_interfaces_toc.md -ifaces all_interfaces.md $(DBUS_IFACE_PAGES)

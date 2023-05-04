@@ -25,6 +25,7 @@ dbus_iface_data = [
 
 dbus_usb_headers = []
 dbus_usb_deps = []
+dbus_usb_toc_inputs = []
 
 foreach d : dbus_iface_data
     codegen = gnome.gdbus_codegen(d[0],
@@ -42,16 +43,27 @@ foreach d : dbus_iface_data
         include_directories: dbus_iface_defs_includes
     )
 
-    dbus_docs += custom_target(d[0] + '_docs',
+    doc_target = custom_target(d[0] + '_docs',
         input: dbus_iface_dir / d[0] + '.xml',
-        output: ['@BASENAME@-doc.md', '@BASENAME@-doc.h'],
+        output: ['@BASENAME@-doc.mdp', '@BASENAME@-doc.h'],
         command: [
             extract_docs, '-i', '@INPUT@', '-o', '@OUTPUT0@', '-H', '@OUTPUT1@',
             '-c', d[2], '-s', d[1], '-n', d[3]
         ])
 
+    dbus_usb_toc_inputs += doc_target[0]
+    dbus_docs += doc_target
+    doc_target = []
     codegen = []
 endforeach
+
+dbus_docs += custom_target('all_interfaces_toc.md',
+    input: dbus_usb_toc_inputs,
+    output: ['all_interfaces_toc.md', 'all_interfaces.md'],
+    command: [
+        combine_iface_pages, '-toc', '@OUTPUT0@', '-ifaces', '@OUTPUT1@', '@INPUT@'
+    ]
+)
 
 usb_list_lib = static_library('usb_list',
     ['usb_list.cc', 'usb_listtree.cc', dbus_usb_headers],

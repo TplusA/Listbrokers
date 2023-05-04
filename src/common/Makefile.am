@@ -127,58 +127,69 @@ libinifile_la_SOURCES = inifile.c inifile.h
 libinifile_la_CFLAGS = $(AM_CFLAGS)
 libinifile_la_CXXFLAGS = $(AM_CXXFLAGS)
 
+DBUS_IFACE_PAGES = \
+    de_tahifi_lists-doc.mdp \
+    de_tahifi_artcache-doc.mdp \
+    de_tahifi_errors-doc.mdp \
+    de_tahifi_debug-doc.mdp
+
 BUILT_SOURCES = \
+    all_interfaces_toc.md \
+    all_interfaces.md \
+    all_interfaces.stamp \
+    $(DBUS_IFACE_PAGES) \
     $(nodist_liblists_dbus_la_SOURCES) \
     de_tahifi_lists-doc.h \
-    de_tahifi_lists-doc.md \
     de_tahifi_lists.stamp \
     $(nodist_libartcache_dbus_la_SOURCES) \
     de_tahifi_artcache-doc.h \
-    de_tahifi_artcache-doc.md \
     de_tahifi_artcache.stamp \
     $(nodist_liberrors_dbus_la_SOURCES) \
     de_tahifi_errors-doc.h \
-    de_tahifi_errors-doc.md \
     de_tahifi_errors.stamp \
     $(nodist_libdebug_dbus_la_SOURCES) \
     de_tahifi_debug-doc.h \
-    de_tahifi_debug-doc.md \
     de_tahifi_debug.stamp
 
 CLEANFILES = $(BUILT_SOURCES)
 
 de_tahifi_lists-doc.h: de_tahifi_lists.stamp
-de_tahifi_lists-doc.md: de_tahifi_lists.stamp
+de_tahifi_lists-doc.mdp: de_tahifi_lists.stamp
 de_tahifi_lists.c: de_tahifi_lists.stamp
 de_tahifi_lists.h: de_tahifi_lists.stamp
 de_tahifi_lists.stamp: $(DBUS_IFACES)/de_tahifi_lists.xml
 	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_lists --c-namespace tdbus_lists --interface-prefix de.tahifi.Lists. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_lists-doc.md -H de_tahifi_lists-doc.h -c tdbus_lists -s de.tahifi.Lists. -n "$(PACKAGE_NAME) (source-independent content browsing)"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_lists-doc.mdp -H de_tahifi_lists-doc.h -c tdbus_lists -s de.tahifi.Lists. -n "$(PACKAGE_NAME) (source-independent content browsing)"
 	touch $@
 
 de_tahifi_artcache-doc.h: de_tahifi_artcache.stamp
-de_tahifi_artcache-doc.md: de_tahifi_artcache.stamp
+de_tahifi_artcache-doc.mdp: de_tahifi_artcache.stamp
 de_tahifi_artcache.c: de_tahifi_artcache.stamp
 de_tahifi_artcache.h: de_tahifi_artcache.stamp
 de_tahifi_artcache.stamp: $(DBUS_IFACES)/de_tahifi_artcache.xml
 	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_artcache --c-namespace tdbus_artcache --interface-prefix de.tahifi.ArtCache. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_artcache-doc.md -H de_tahifi_artcache-doc.h -c tdbus_artcache -s de.tahifi.ArtCache. -n "$(PACKAGE_NAME) (cover art)"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_artcache-doc.mdp -H de_tahifi_artcache-doc.h -c tdbus_artcache -s de.tahifi.ArtCache. -n "$(PACKAGE_NAME) (cover art)"
 	touch $@
 
 de_tahifi_errors-doc.h: de_tahifi_errors.stamp
-de_tahifi_errors-doc.md: de_tahifi_errors.stamp
+de_tahifi_errors-doc.mdp: de_tahifi_errors.stamp
 de_tahifi_errors.c: de_tahifi_errors.stamp
 de_tahifi_errors.h: de_tahifi_errors.stamp
 de_tahifi_errors.stamp: $(DBUS_IFACES)/de_tahifi_errors.xml
 	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_errors --c-namespace tdbus --interface-prefix de.tahifi. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_errors-doc.md -H de_tahifi_errors-doc.h -c tdbus -s de.tahifi. -n "$(PACKAGE_NAME) (cover art)"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_errors-doc.mdp -H de_tahifi_errors-doc.h -c tdbus -s de.tahifi. -n "$(PACKAGE_NAME) (cover art)"
 	touch $@
 
 de_tahifi_debug-doc.h: de_tahifi_debug.stamp
-de_tahifi_debug-doc.md: de_tahifi_debug.stamp
+de_tahifi_debug-doc.mdp: de_tahifi_debug.stamp
 de_tahifi_debug.c: de_tahifi_debug.stamp
 de_tahifi_debug.h: de_tahifi_debug.stamp
 de_tahifi_debug.stamp: $(DBUS_IFACES)/de_tahifi_debug.xml
 	$(GDBUS_CODEGEN) --generate-c-code=de_tahifi_debug --c-namespace tdbus_debug --interface-prefix de.tahifi.Debug. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_debug-doc.md -H de_tahifi_debug-doc.h -c tdbus_debug -s de.tahifi.Debug. -n "Introspection"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o de_tahifi_debug-doc.mdp -H de_tahifi_debug-doc.h -c tdbus_debug -s de.tahifi.Debug. -n "Introspection"
 	touch $@
+
+all_interfaces_toc.md: all_interfaces.stamp
+all_interfaces.md: all_interfaces.stamp
+all_interfaces.stamp: $(DBUS_IFACE_PAGES)
+	$(DBUS_IFACES)/combine_iface_pages.sh -toc all_interfaces_toc.md -ifaces all_interfaces.md $(DBUS_IFACE_PAGES)

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2019  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2019, 2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -30,6 +30,7 @@ endif
 EXTRA_DIST = \
     README.md \
     dbus_interfaces/extract_documentation.py \
+    dbus_interfaces/combine_iface_pages.sh \
     dbus_interfaces/com_intel_dleynaserver.xml \
     dbus_interfaces/de_tahifi_artcache.xml \
     dbus_interfaces/de_tahifi_lists.xml \

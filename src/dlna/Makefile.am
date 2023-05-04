@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015--2022  T+A elektroakustik GmbH & Co. KG
+# Copyright (C) 2015--2023  T+A elektroakustik GmbH & Co. KG
 #
 # This file is part of T+A List Brokers.
 #
@@ -125,32 +125,43 @@ libupnp_dleynaserver_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 nodist_libupnp_media_dbus_la_SOURCES = org_gnome_upnp.c org_gnome_upnp.h
 libupnp_media_dbus_la_CFLAGS = $(CRELAXEDWARNINGS)
 
+DBUS_IFACE_PAGES = \
+    com_intel_dleynaserver-doc.mdp \
+    org_gnome_upnp-doc.mdp
+
 BUILT_SOURCES = \
+    all_interfaces_toc.md \
+    all_interfaces.md \
+    all_interfaces.stamp \
+    $(DBUS_IFACE_PAGES) \
     $(nodist_libupnp_dleynaserver_dbus_la_SOURCES) \
     com_intel_dleynaserver-doc.h \
-    com_intel_dleynaserver-doc.md \
     com_intel_dleynaserver.stamp \
     $(nodist_libupnp_media_dbus_la_SOURCES) \
     org_gnome_upnp-doc.h \
-    org_gnome_upnp-doc.md \
     org_gnome_upnp.stamp
 
 CLEANFILES = $(BUILT_SOURCES)
 
 com_intel_dleynaserver-doc.h: com_intel_dleynaserver.stamp
-com_intel_dleynaserver-doc.md: com_intel_dleynaserver.stamp
+com_intel_dleynaserver-doc.mdp: com_intel_dleynaserver.stamp
 com_intel_dleynaserver.c: com_intel_dleynaserver.stamp
 com_intel_dleynaserver.h: com_intel_dleynaserver.stamp
 com_intel_dleynaserver.stamp: $(DBUS_IFACES)/com_intel_dleynaserver.xml
 	$(GDBUS_CODEGEN) --generate-c-code=com_intel_dleynaserver --c-namespace tdbus_dleynaserver --interface-prefix com.intel.dLeynaServer. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o com_intel_dleynaserver-doc.md -H com_intel_dleynaserver-doc.h -c tdbus_dleynaserver -s com.intel.dLeynaServer. -n "$(PACKAGE_NAME) (DLNA server management)"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o com_intel_dleynaserver-doc.mdp -H com_intel_dleynaserver-doc.h -c tdbus_dleynaserver -s com.intel.dLeynaServer. -n "$(PACKAGE_NAME) (DLNA server management)"
 	touch $@
 
 org_gnome_upnp-doc.h: org_gnome_upnp.stamp
-org_gnome_upnp-doc.md: org_gnome_upnp.stamp
+org_gnome_upnp-doc.mdp: org_gnome_upnp.stamp
 org_gnome_upnp.c: org_gnome_upnp.stamp
 org_gnome_upnp.h: org_gnome_upnp.stamp
 org_gnome_upnp.stamp: $(DBUS_IFACES)/org_gnome_upnp.xml
 	$(GDBUS_CODEGEN) --generate-c-code=org_gnome_upnp --c-namespace tdbus_upnp --interface-prefix org.gnome.UPnP. $<
-	$(DBUS_IFACES)/extract_documentation.py -i $< -o org_gnome_upnp-doc.md -H org_gnome_upnp-doc.h -c tdbus_upnp -s org.gnome.UPnP. -n "$(PACKAGE_NAME) (DLNA content browsing)"
+	$(DBUS_IFACES)/extract_documentation.py -i $< -o org_gnome_upnp-doc.mdp -H org_gnome_upnp-doc.h -c tdbus_upnp -s org.gnome.UPnP. -n "$(PACKAGE_NAME) (DLNA content browsing)"
 	touch $@
+
+all_interfaces_toc.md: all_interfaces.stamp
+all_interfaces.md: all_interfaces.stamp
+all_interfaces.stamp: $(DBUS_IFACE_PAGES)
+	$(DBUS_IFACES)/combine_iface_pages.sh -toc all_interfaces_toc.md -ifaces all_interfaces.md $(DBUS_IFACE_PAGES)
