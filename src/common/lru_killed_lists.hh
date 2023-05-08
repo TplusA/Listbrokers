@@ -1,6 +1,3 @@
-#ifndef LRU_KILLED_LISTS_HH
-#define LRU_KILLED_LISTS_HH
-
 /*
  * Copyright (C) 2022  T+A elektroakustik GmbH & Co. KG
  *
@@ -21,6 +18,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA  02110-1301, USA.
  */
+
+#ifndef LRU_KILLED_LISTS_HH
+#define LRU_KILLED_LISTS_HH
 
 #include "idtypes.hh"
 #include "logged_lock.hh"
