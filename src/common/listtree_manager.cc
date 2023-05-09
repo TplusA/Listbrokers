@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -30,7 +30,7 @@ void ListTreeManager::announce_root_list(ID::List id)
 {
     msg_log_assert(id.is_valid());
 
-    cache_check_.list_invalidate(ID::List(), id);
+    cache_check_->list_invalidate(ID::List(), id);
 
     auto *iface = DBusNavlists::get_navigation_iface();
     tdbus_lists_navigation_emit_list_invalidate(iface, 0, id.get_raw_id());
@@ -44,7 +44,7 @@ void ListTreeManager::reinsert_list(ID::List &id)
     id = cache_.insert_again(std::move(list));
     msg_log_assert(id != old_id);
 
-    cache_check_.list_invalidate(old_id, id);
+    cache_check_->list_invalidate(old_id, id);
 
     auto *iface = DBusNavlists::get_navigation_iface();
     tdbus_lists_navigation_emit_list_invalidate(iface, old_id.get_raw_id(),
@@ -75,12 +75,12 @@ ListTreeManager::force_list_into_cache(ID::List list_id, bool force)
 {
     if(force)
     {
-        return std::max(cache_check_.put_override(list_id),
+        return std::max(cache_check_->put_override(list_id),
                         std::chrono::seconds::zero());
     }
     else
     {
-        cache_check_.remove_override(list_id);
+        cache_check_->remove_override(list_id);
         return std::chrono::seconds::zero();
     }
 }
@@ -99,7 +99,7 @@ void ListTreeManager::repin_if_first_is_deepest_pinned_list(ID::List first_id,
 
 void ListTreeManager::list_discarded_from_cache(ID::List id)
 {
-    cache_check_.list_invalidate(id, ID::List());
+    cache_check_->list_invalidate(id, ID::List());
 
     auto *iface = DBusNavlists::get_navigation_iface();
     tdbus_lists_navigation_emit_list_invalidate(iface, id.get_raw_id(), 0);
@@ -168,7 +168,7 @@ ListTreeManager::purge_subtree(ID::List old_id, ID::List new_id,
         if(set_root != nullptr)
             set_root(old_id, new_id);
 
-        cache_check_.list_invalidate(old_id, new_id);
+        cache_check_->list_invalidate(old_id, new_id);
 
         tdbus_lists_navigation_emit_list_invalidate(DBusNavlists::get_navigation_iface(),
                                                     old_id.get_raw_id(),

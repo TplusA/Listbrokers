@@ -56,10 +56,10 @@ class ListTree: public ListTreeIface
                       DBusAsync::WorkQueue &navlists_get_uris,
                       DBusAsync::WorkQueue &navlists_realize_location,
                       LRU::Cache &cache,
-                      Cacheable::CheckNoOverrides &cache_check):
+                      std::unique_ptr<Cacheable::CheckNoOverrides> cache_check):
         ListTreeIface(navlists_get_range, navlists_get_list_id,
                       navlists_get_uris, navlists_realize_location),
-        lt_manager_(cache, cache_check)
+        lt_manager_(cache, std::move(cache_check))
     {}
 
     ~ListTree()

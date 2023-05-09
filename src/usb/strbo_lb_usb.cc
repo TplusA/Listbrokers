@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015--2017, 2019, 2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -36,7 +37,6 @@ class USBListTreeData: public ListTreeData
 {
   public:
     std::unique_ptr<USB::ListTree> list_tree_;
-    std::unique_ptr<Cacheable::CheckNoOverrides> cache_check_;
 
     static DBusAsync::WorkQueue navlists_get_range_;
     static DBusAsync::WorkQueue navlists_get_list_id_;
@@ -126,8 +126,8 @@ static int create_list_tree_and_cache(USBListTreeData &lt, GMainLoop *loop)
     if(lt.cache_control_ == nullptr)
         return msg_out_of_memory("LRU cache control");
 
-    lt.cache_check_ = std::make_unique<Cacheable::CheckNoOverrides>();
-    if(lt.cache_check_ == nullptr)
+    auto cache_check = std::make_unique<Cacheable::CheckNoOverrides>();
+    if(cache_check == nullptr)
         return msg_out_of_memory("Cacheable check");
 
     lt.list_tree_ =
@@ -136,7 +136,7 @@ static int create_list_tree_and_cache(USBListTreeData &lt, GMainLoop *loop)
             USBListTreeData::navlists_get_list_id_,
             USBListTreeData::navlists_get_uris_,
             USBListTreeData::navlists_realize_location_,
-            *lt.cache_, *lt.cache_check_);
+            *lt.cache_, std::move(cache_check));
     if(lt.list_tree_ == nullptr)
         return msg_out_of_memory("USB list tree");
 

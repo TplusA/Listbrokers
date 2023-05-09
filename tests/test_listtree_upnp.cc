@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2020  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2020, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -77,7 +77,7 @@ static LRU::Cache *cache;
 static constexpr size_t maximum_number_of_objects = 1000;
 
 static UPnP::ListTree *list_tree;
-static Cacheable::CheckNoOverrides *cacheable_check;
+static std::unique_ptr<Cacheable::CheckNoOverrides> cacheable_check;
 
 static tdbuslistsNavigation *const dbus_lists_navigation_iface_dummy =
     reinterpret_cast<tdbuslistsNavigation *>(0x24681357);
@@ -154,11 +154,11 @@ void cut_setup()
     cache->set_callbacks([]{}, []{}, [] (ID::List id) {}, []{});
     cppcut_assert_equal(size_t(0), cache->count());
 
-    cacheable_check = new Cacheable::CheckNoOverrides();
-    cppcut_assert_not_null(cacheable_check);
+    cacheable_check = std::make_unique<Cacheable::CheckNoOverrides>();
+    cppcut_assert_not_null(cacheable_check.get());
 
     static DBusAsync::WorkQueue q(DBusAsync::WorkQueue::Mode::SYNCHRONOUS);
-    list_tree = new UPnP::ListTree(q, q, q, q, *cache, *cacheable_check);
+    list_tree = new UPnP::ListTree(q, q, q, q, *cache, std::move(cacheable_check));
     cppcut_assert_not_null(list_tree);
     list_tree->init();
     list_tree->start_threads(1, true);
@@ -173,7 +173,6 @@ void cut_teardown()
     delete list_tree;
     list_tree = nullptr;
 
-    delete cacheable_check;
     cacheable_check = nullptr;
 
     delete cache;

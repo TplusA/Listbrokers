@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015--2019, 2022  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2015--2019, 2022, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -55,9 +55,10 @@ class ListTreeManager
     ListTreeManager(const ListTreeManager &) = delete;
     ListTreeManager &operator=(const ListTreeManager &) = delete;
 
-    explicit ListTreeManager(LRU::Cache &cache, Cacheable::CheckIface &check):
+    explicit ListTreeManager(LRU::Cache &cache,
+                             std::unique_ptr<Cacheable::CheckIface> check):
         cache_(cache),
-        cache_check_(check),
+        cache_check_(std::move(check)),
         default_cache_mode_request_(LRU::CacheModeRequest::AUTO)
     {}
 
@@ -180,7 +181,7 @@ class ListTreeManager
         if(auto list = lookup_list<ListType>(list_id))
             return list->template enter_child<FillerType>(
                         cache_, default_cache_mode_request_, item_id, may_continue,
-                        [this] (ID::List id) { return cache_check_.is_cacheable(id); },
+                        [this] (ID::List id) { return cache_check_->is_cacheable(id); },
                         [this] (ID::List old_id, ID::List new_id,
                                 const EnterChild::SetNewRoot &set_root)
                         {
@@ -305,7 +306,7 @@ class ListTreeManager
 
   private:
     LRU::Cache &cache_;
-    Cacheable::CheckIface &cache_check_;
+    std::unique_ptr<Cacheable::CheckIface> cache_check_;
     LRU::CacheModeRequest default_cache_mode_request_;
 
     std::shared_ptr<LRU::Entry> pending_list_;
