@@ -21,7 +21,7 @@
 
 project('Listbrokers (free)', ['cpp', 'c'],
     version: '5.13',
-    default_options: ['warning_level=3', 'cpp_std=c++14', 'buildtype=plain'])
+    default_options: ['warning_level=3', 'cpp_std=c++17', 'buildtype=plain'])
 
 config_data = configuration_data()
 config_data.set('PACKAGE', 'listbrokers')
