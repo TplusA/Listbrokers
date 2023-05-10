@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2016, 2017, 2019, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -124,11 +124,12 @@ class String
 class StreamLink
 {
   public:
-    const String url_;
+    String url_;
 
     StreamLink(const StreamLink &) = delete;
     StreamLink(StreamLink &&) = default;
     StreamLink &operator=(const StreamLink &) = delete;
+    StreamLink &operator=(StreamLink &&) = default;
 
     explicit StreamLink(const std::string &url):
         url_(Sensitivity::GENERIC, url)
@@ -136,6 +137,10 @@ class StreamLink
 
     explicit StreamLink(const char *const url):
         url_(Sensitivity::GENERIC, url)
+    {}
+
+    explicit StreamLink(String &&url):
+        url_(std::move(url))
     {}
 };
 

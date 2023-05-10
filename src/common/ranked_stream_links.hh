@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019  T+A elektroakustik GmbH & Co. KG
+ * Copyright (C) 2017, 2019, 2023  T+A elektroakustik GmbH & Co. KG
  *
  * This file is part of T+A List Brokers.
  *
@@ -51,6 +51,13 @@ class RankedStreamLinks
         rank_(rank),
         bitrate_bits_per_second_(rate),
         link_(uri)
+    {}
+
+    explicit RankedStreamLinks(uint32_t rank, uint32_t rate,
+                               StreamLink &&link):
+        rank_(rank),
+        bitrate_bits_per_second_(rate),
+        link_(std::move(link))
     {}
 
     uint32_t get_rank() const { return rank_; }
