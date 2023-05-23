@@ -316,9 +316,10 @@ UPnP::ListTree::get_server_item(const UPnP::MediaList &list) const
  * \todo This function uses the org.gnome.UPnP.MediaItem2.URLs property, but
  *     that interface makes is practically impossible to determine MIME types
  *     of streams as soon as there are multiple URLs to choose from (see
- *     https://01.org/dleyna/documentation/dleyna-server/item-objects). dLeyna
- *     defines the "Resources" property which should be used to handle this
- *     case cleanly.
+ *     https://github.com/intel/dleyna-server/blob/master/doc/server/dbus/API.txt,
+ *     section "Item Objects"). dLeyna defines the "Resources" property which
+ *     should be used to handle this case cleanly (see section "Resources" in
+ *     the \c API.txt file).
  */
 ListError UPnP::ListTree::get_uris_for_item(ID::List list_id, ID::Item item_id,
                                             std::vector<Url::String> &uris,
